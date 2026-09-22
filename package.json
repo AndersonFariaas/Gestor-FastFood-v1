@@ -1,0 +1,31 @@
+{
+  "name": "fastfood",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndersonFariaas/SistemaFastFood.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AndersonFariaas/SistemaFastFood/issues"
+  },
+  "homepage": "https://github.com/AndersonFariaas/SistemaFastFood#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true
+  }
+}

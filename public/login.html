@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanchonete • Acesso</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-100 h-screen flex items-center justify-center font-sans" data-page="login">
+
+    <div class="bg-white p-10 rounded-2xl shadow-2xl max-w-sm w-full relative overflow-hidden">
+
+        <!-- HEADER DA TELA -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="ph-fill ph-hamburger text-5xl text-orange-500"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900" id="form-title">Acesso Restrito</h1>
+            <p class="text-gray-500 text-sm mt-1" id="form-subtitle">Faça login para continuar</p>
+        </div>
+
+        <!-- FORMULÁRIO -->
+        <form id="authForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                <div class="relative">
+                    <i class="ph ph-user absolute left-3 top-3 text-gray-400 text-lg"></i>
+                    <input id="username" type="text" required
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                <div class="relative">
+                    <i class="ph ph-lock absolute left-3 top-3 text-gray-400 text-lg"></i>
+                    <input id="password" type="password" required
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <!-- Este campo só aparece no modo Cadastro -->
+            <div id="roleSelection" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Perfil de Acesso</label>
+                <select id="role"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white">
+                    <option value="user">Usuário Comum (Caixa / Cozinha)</option>
+                    <option value="admin">Administrador (Total)</option>
+                </select>
+            </div>
+
+            <button type="submit" id="btnSubmit"
+                class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-bold text-lg transition-colors mt-4 shadow-md">
+                Entrar no Sistema
+            </button>
+        </form>
+
+        <div class="mt-6 text-center">
+            <button type="button" id="toggleMode"
+                class="text-orange-600 hover:text-orange-800 font-medium text-sm transition-colors">
+                Criar novo usuário
+            </button>
+        </div>
+    </div>
+
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <div id="toast"
+        class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl font-medium flex items-center gap-2 z-50">
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/login.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanchonete • Caixa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-50 h-screen flex flex-col font-sans text-gray-800 overflow-hidden" data-page="caixa">
+
+    <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <i class="ph-fill ph-hamburger text-3xl text-orange-500"></i>
+            <h1 class="text-xl font-bold">Lanchonete <span class="text-sm font-normal text-gray-500 ml-2">Caixa</span>
+            </h1>
+        </div>
+        <nav class="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            <a href="index.html"
+                class="px-4 py-2 bg-white text-orange-600 shadow-sm rounded-md font-semibold text-sm">Caixa</a>
+            <a href="cozinha.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm"
+                target="_blank">Cozinha</a>
+            <a href="cardapio.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Cardápio</a>
+            <a href="pedidos.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Pedidos</a>
+            <a href="fechamento.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Fechamento</a>
+        </nav>
+    </header>
+
+    <main class="flex flex-1 overflow-hidden">
+        <section class="flex-1 p-6 flex flex-col overflow-y-auto">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Novo Pedido</h2>
+                    <p class="text-gray-500 text-sm">Monte o pedido e envie para a cozinha.</p>
+                </div>
+                <div class="relative w-72">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400 text-lg"></i>
+                    <input id="buscaProduto" type="text" placeholder="Buscar item..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <div id="categorias" class="flex gap-2 mb-6 flex-wrap"></div>
+            <div id="produtos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+        </section>
+
+        <aside class="w-96 bg-white shadow-xl flex flex-col border-l border-gray-200 z-20">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i class="ph ph-shopping-cart text-xl"></i> Pedido Atual
+                </h2>
+                <button id="limparPedido" class="text-sm text-red-500 hover:text-red-700 font-medium">Limpar</button>
+            </div>
+
+            <div id="pedidoItens" class="flex-1 overflow-y-auto p-5 space-y-3"></div>
+
+            <div class="p-5 bg-gray-50 border-t border-gray-200 space-y-3">
+                <input id="cliente" placeholder="Cliente / Mesa (Opcional)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm">
+                <input id="observacao" placeholder="Observação (Ex: Sem cebola)"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm">
+
+                <div class="mb-3 border-b border-gray-200 pb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</label>
+                    <select id="pagamento" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm bg-white">
+                        <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                        <option value="Cartão de Débito">💳 Cartão de Débito</option>
+                        <option value="PIX">💠 PIX</option>
+                        <option value="Dinheiro">💵 Dinheiro</option>
+                        <option value="Vale Alimentação/Refeição">🎟️ Vale Alimentação/Refeição</option>
+                    </select>
+                </div>    
+
+                <div class="flex justify-between items-center py-2">
+                    <span class="text-gray-600 font-medium">Total:</span>
+                    <strong id="total" class="text-2xl font-bold text-gray-900">R$ 0,00</strong>
+                </div>
+
+                <button id="enviarPedido" disabled
+                    class="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold text-lg transition-colors flex justify-center items-center gap-2">
+                    <i class="ph ph-paper-plane-right"></i> Enviar Pedido
+                </button>
+            </div>
+        </aside>
+    </main>
+
+    <div id="toast"
+        class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl font-medium flex items-center gap-2 z-50">
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/caixa.js"></script>
+</body>
+
+</html>

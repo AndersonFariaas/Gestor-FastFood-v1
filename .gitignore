@@ -1,0 +1,17 @@
+# Dependências do Node.js (Isso é muito pesado, o GitHub não precisa disso)
+node_modules/
+
+# Arquivo do Banco de Dados Local (Para não vazar senhas ou vendas reais)
+*.sqlite
+*.sqlite3
+*.db
+
+# Variáveis de ambiente (Onde ficam os segredos de login e chaves privadas)
+.env
+
+# Arquivos de sistema operacional (Mac/Windows)
+.DS_Store
+Thumbs.db
+
+# Arquivos de log
+npm-debug.log*

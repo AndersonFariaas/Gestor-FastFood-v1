@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanchonete • Cardápio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800" data-page="cardapio">
+
+    <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <i class="ph-fill ph-list-dashes text-3xl text-orange-500"></i>
+            <h1 class="text-xl font-bold">Lanchonete <span
+                    class="text-sm font-normal text-gray-500 ml-2">Gerenciamento</span></h1>
+        </div>
+        <nav class="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            <a href="index.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Caixa</a>
+            <a href="cardapio.html"
+                class="px-4 py-2 bg-white text-orange-600 shadow-sm rounded-md font-semibold text-sm">Cardápio</a>
+            <a href="pedidos.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Pedidos</a>
+            <a href="fechamento.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Fechamento</a>
+        </nav>
+    </header>
+
+    <main class="max-w-6xl w-full mx-auto p-8">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-1">Cardápio</h1>
+                <p class="text-gray-500">Gerencie seus produtos e categorias.</p>
+            </div>
+            <button id="novoProduto"
+                class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 shadow-sm transition-colors">
+                <i class="ph ph-plus-circle text-lg"></i> Novo Item
+            </button>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex gap-4">
+            <div class="relative flex-1">
+                <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
+                <input id="filtroCardapio"
+                    class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                    placeholder="Buscar produto...">
+            </div>
+            <select id="filtroCategoria"
+                class="w-64 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white">
+                <option value="">Todas as categorias</option>
+            </select>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" id="tabelaProdutos"></div>
+    </main>
+
+    <!-- Modal Novo/Editar Produto -->
+    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <form id="produtoForm" class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 id="modalTitulo" class="text-xl font-bold text-gray-800">Novo item</h2>
+                <button type="button" id="fecharModal"
+                    class="text-gray-400 hover:text-gray-600 text-2xl"></button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="produtoId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                    <input id="produtoNome" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Preço (R$)</label>
+                        <input id="produtoPreco" type="number" min="0" step="0.01" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                        <input id="produtoCategoria" placeholder="Ex: Bebidas" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                    <input id="produtoDescricao" placeholder="Opcional"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <label class="flex items-center gap-2 mt-4 cursor-pointer">
+                    <input id="produtoAtivo" type="checkbox" checked
+                        class="w-5 h-5 text-orange-500 rounded focus:ring-orange-500">
+                    <span class="text-gray-700 font-medium">Disponível no caixa</span>
+                </label>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button type="button" id="cancelar"
+                    class="px-5 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors">Cancelar</button>
+                <button type="submit"
+                    class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-bold shadow-sm transition-colors">Salvar
+                    item</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="toast"
+        class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-xl font-medium flex items-center gap-2 z-50">
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/cardapio.js"></script>
+</body>
+
+</html>
