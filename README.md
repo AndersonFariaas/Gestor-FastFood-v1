@@ -12,7 +12,7 @@ Um sistema completo para gerenciamento de lanchonetes e pizzarias, construído c
 
 1. Clone o repositório:
 \`\`\`bash
-git clone https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
+git clone https://github.com/AndersonFariaas/Gestor-FastFood-v1.git
 \`\`\`
 
 2. Instale as dependências:
