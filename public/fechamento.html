@@ -12,19 +12,29 @@
 <body class="bg-gray-50 min-h-screen flex flex-col font-sans text-gray-800" data-page="fechamento">
     <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10 border-b border-gray-200">
         <div class="flex items-center gap-3">
-            <i class="ph-fill ph-calculator text-3xl text-orange-500"></i>
-            <h1 class="text-xl font-bold">Lanchonete <span
-                    class="text-sm font-normal text-gray-500 ml-2">Financeiro</span></h1>
+            <i class="ph-fill ph-hamburger text-3xl text-orange-500"></i>
+            <h1 class="text-xl font-bold">Lanchonete <span class="text-sm font-normal text-gray-500 ml-2">Sistema</span>
+            </h1>
         </div>
-        <nav class="flex gap-1 bg-gray-100 p-1 rounded-lg">
-            <a href="index.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Caixa</a>
-            <a href="cozinha.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm"
-                target="_blank">Cozinha</a>
-            <a href="cardapio.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Cardápio</a>
-            <a href="pedidos.html" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">Pedidos</a>
-            <a href="fechamento.html"
-                class="px-4 py-2 bg-white text-orange-600 shadow-sm rounded-md font-semibold text-sm">Fechamento</a>
-        </nav>
+
+        <div class="flex items-center gap-4">
+            <!-- Navegação apenas com Hover -->
+            <nav class="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                <a href="index.html"
+                    class="px-4 py-2 text-gray-600 hover:bg-white hover:text-orange-600 hover:shadow-sm rounded-md font-medium text-sm transition-all duration-200">Caixa</a>
+                <a href="cozinha.html" target="_blank"
+                    class="px-4 py-2 text-gray-600 hover:bg-white hover:text-orange-600 hover:shadow-sm rounded-md font-medium text-sm transition-all duration-200">Cozinha</a>
+                <a href="painel.html" target="_blank"
+                    class="px-4 py-2 text-gray-600 hover:bg-white hover:text-orange-600 hover:shadow-sm rounded-md font-medium text-sm transition-all duration-200">Painel TV</a>
+            </nav>
+
+            <!-- Botão de Configurações -->
+            <button id="btnConfig"
+                class="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                title="Menu e Configurações">
+                <i class="ph-fill ph-gear text-xl"></i>
+            </button>
+        </div>
     </header>
     <main class="max-w-6xl w-full mx-auto p-8 flex flex-col gap-6">
         <div class="flex justify-between items-end">
@@ -61,6 +71,65 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/app.js"></script>
     <script src="js/fechamento.js"></script>
+
+    <!-- Modal de Configurações Gerais -->
+    <div id="configModal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="ph-fill ph-gear text-orange-500"></i> Menu e Configurações
+                </h2>
+                <button type="button" id="fecharConfig"
+                    class="text-gray-400 hover:text-gray-600 text-2xl transition-colors">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Painel Administrativo / Operacional -->
+                <div>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Gestão</h3>
+                    <div id="gridBotoesConfig" class="grid grid-cols-3 gap-3">
+                        <a href="pedidos.html"
+                            class="flex flex-col items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors group">
+                            <i
+                                class="ph ph-receipt text-3xl text-gray-400 group-hover:text-orange-500 mb-2 transition-colors"></i>
+                            <span class="font-semibold text-sm text-center">Histórico de pedidos</span>
+                        </a>
+                        <a href="cardapio.html"
+                            class="flex flex-col items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors group">
+                            <i
+                                class="ph ph-list-dashes text-3xl text-gray-400 group-hover:text-orange-500 mb-2 transition-colors"></i>
+                            <span class="font-semibold text-sm text-center">Editar cardápio</span>
+                        </a>
+                        <a href="fechamento.html"
+                            class="flex flex-col items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-colors group">
+                            <i
+                                class="ph ph-calculator text-3xl text-gray-400 group-hover:text-orange-500 mb-2 transition-colors"></i>
+                            <span class="font-semibold text-sm">Fechamento</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Configurações de Impressora -->
+                <div>
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Impressão (Cupom)</h3>
+                    <div class="space-y-3">
+                        <label
+                            class="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <div>
+                                <strong class="block text-sm text-gray-800">Impressão Automática</strong>
+                                <small class="text-gray-500">Imprimir ao enviar pedido</small>
+                            </div>
+                            <input type="checkbox" id="printAuto"
+                                class="w-5 h-5 text-orange-500 rounded focus:ring-orange-500">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
