@@ -17,7 +17,9 @@ if (!session && currentPage !== 'login') {
 
 if (session && currentPage !== 'login') {
     const headerTitle = document.querySelector('header h1');
-    if (headerTitle && !document.getElementById('user-info-header')) {
+
+    // AQUI ESTÁ A MÁGICA: Só injeta o botão de "Sair" se NÃO for a Cozinha e NÃO for o Painel.
+    if (headerTitle && !document.getElementById('user-info-header') && currentPage !== 'cozinha' && currentPage !== 'painel') {
         headerTitle.innerHTML += `<div id="user-info-header" class="block text-sm font-normal text-gray-500 mt-1"><i class="ph ph-user"></i> ${session.username} (${session.role === 'admin' ? 'Gerente' : 'Operador'}) | <button onclick="logout()" class="text-red-500 hover:underline cursor-pointer">Sair</button></div>`;
     }
 
@@ -139,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bloqueia ícones do painel administrativo se o operador for comum
         if (session && session.role === 'user') {
             document.querySelectorAll('#configModal a[href="cardapio.html"], #configModal a[href="fechamento.html"]').forEach(el => el.style.display = 'none');
-            
+
             // Reajusta o layout para o botão "Pedidos" não ficar pequeno no canto
             const gridBotoes = document.getElementById('gridBotoesConfig');
             if (gridBotoes) {
