@@ -82,37 +82,41 @@ function renderCart() {
     $('total').textContent = money(total); $('enviarPedido').disabled = !cart.length;
 }
 
-function send() { 
+function send() {
     if (!cart.length) return;
-    const total = cart.reduce((s, i) => s + i.price * i.qty, 0); 
-    
-    // BLINDAGEM: Verifica se o elemento existe no HTML antes de tentar pegar o valor
-    const elementoPagamento = $('pagamento');
-    const paymentMethod = elementoPagamento ? elementoPagamento.value : 'Dinheiro';
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const elPagamento = $('pagamento');
 
-    const order = { 
-        id: uid('ped'), 
-        number: db.orders.length ? Math.max(...db.orders.map(o => o.number)) + 1 : 1, 
-        createdAt: new Date().toISOString(), 
-        status: 'NOVO', 
-        customer: $('cliente').value.trim() || 'Balcão', 
-        note: $('observacao').value.trim(), 
-        items: cart.map(i => ({ ...i })), 
+    const order = {
+        id: uid('ped'),
+        number: db.orders.length ? Math.max(...db.orders.map(o => o.number)) + 1 : 1,
+        createdAt: new Date().toISOString(),
+        status: 'NOVO',
+        customer: $('cliente').value.trim() || 'Balcão',
+        note: $('observacao').value.trim(),
+        items: cart.map(i => ({ ...i })),
         total,
-        paymentMethod // Agora não vai quebrar o código!
-    }; 
-    
-    db.orders.push(order); 
-    saveDB(db); 
-    cart = []; 
-    $('cliente').value = '';$('observacao').value = ''; 
-    renderCart(); 
+        paymentMethod: elPagamento ? elPagamento.value : 'Dinheiro'
+    };
+
+    sendNewOrder(order);
+
+    cart = [];
+    $('cliente').value = '';
+    $('observacao').value = '';
+    renderCart();
     toast(`Pedido #${order.number} enviado para a cozinha!`);
 }
 
 function render() { db = loadDB(); renderCats(); renderProducts(); renderCart(); }
 
-$('buscaProduto').addEventListener('input', renderProducts);
-$('limparPedido').onclick = () => { cart = []; renderCart(); }; $('enviarPedido').onclick = send;
+let timerBusca;
+$('buscaProduto').addEventListener('input', () => {
+    clearTimeout(timerBusca);
+    timerBusca = setTimeout(renderProducts, 300);
+});
+
+$('limparPedido').onclick = () => { cart = []; renderCart(); };
+$('enviarPedido').onclick = send;
 window.addEventListener('dbchange', render);
 render();

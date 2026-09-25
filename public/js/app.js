@@ -2,7 +2,6 @@
 const currentPage = document.body.dataset ? document.body.dataset.page : '';
 let session = null;
 
-// Tenta ler a sessão; se estiver corrompida, limpa para não travar o sistema
 try {
     session = JSON.parse(localStorage.getItem('lanchonete_session'));
 } catch (e) {
@@ -12,12 +11,10 @@ try {
 let currentFile = window.location.pathname.split('/').pop();
 if (currentFile === '' || currentFile === '/') currentFile = 'index.html';
 
-// Barreira 1: Se não tem sessão e não está no login, redireciona
 if (!session && currentPage !== 'login') {
     window.location.href = `login.html?redirect=${currentFile}`;
 }
 
-// Barreira 2: Controle de interface para quem está logado
 if (session && currentPage !== 'login') {
     const headerTitle = document.querySelector('header h1');
     if (headerTitle && !document.getElementById('user-info-header')) {
@@ -38,10 +35,8 @@ function logout() {
     localStorage.removeItem('lanchonete_session');
     window.location.href = 'login.html';
 }
-// =========================================== //
 
 // ====== 2. COMUNICAÇÃO COM O SERVIDOR ====== //
-// Proteção: Só tenta conectar se o script do Socket.io existir na página
 const socket = typeof io !== 'undefined' ? io() : null;
 let localDB = { products: [], orders: [] };
 
@@ -50,20 +45,43 @@ if (socket) {
         localDB = serverDB;
         window.dispatchEvent(new Event('dbchange'));
     });
-} else {
-    console.error("ATENÇÃO: Socket.io não encontrado. Verifique a tag <script src='/socket.io/socket.io.js'> no seu HTML.");
+
+    socket.on('orderAdded', (newOrder) => {
+        localDB.orders.push(newOrder);
+        window.dispatchEvent(new Event('dbchange'));
+        if (currentPage === 'cozinha') {
+            const som = document.getElementById('somAlerta');
+            if (som) som.play().catch(e => console.log("Navegador bloqueou som", e));
+        }
+    });
+
+    socket.on('orderStatusChanged', (data) => {
+        const order = localDB.orders.find(o => o.id === data.id);
+        if (order) {
+            order.status = data.status;
+            window.dispatchEvent(new Event('dbchange'));
+        }
+    });
 }
 
-function loadDB() {
-    return structuredClone(localDB);
+function loadDB() { return structuredClone(localDB); }
+
+function sendNewOrder(order) {
+    if (socket) {
+        socket.emit('newOrder', order);
+        localDB.orders.push(order);
+        window.dispatchEvent(new Event('dbchange'));
+    }
 }
 
-function saveDB(db) {
-    localDB = structuredClone(db);
-    if (socket) socket.emit('updateDB', localDB);
-    window.dispatchEvent(new Event('dbchange'));
+function changeOrderStatus(orderId, newStatus) {
+    if (socket) {
+        socket.emit('updateOrderStatus', { id: orderId, status: newStatus });
+        const order = localDB.orders.find(o => o.id === orderId);
+        if (order) order.status = newStatus;
+        window.dispatchEvent(new Event('dbchange'));
+    }
 }
-// =========================================== //
 
 // ====== 3. FUNÇÕES UTILITÁRIAS ====== //
 function money(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
@@ -77,9 +95,7 @@ function toast(msg) {
     el.classList.remove('translate-y-20', 'opacity-0');
 
     clearTimeout(window._toast);
-    window._toast = setTimeout(() => {
-        el.classList.add('translate-y-20', 'opacity-0');
-    }, 3000);
+    window._toast = setTimeout(() => { el.classList.add('translate-y-20', 'opacity-0'); }, 3000);
 }
 
 function statusLabel(s) { return ({ NOVO: 'Novo', EM_PREPARO: 'Em preparo', PRONTO: 'Pronto', ENTREGUE: 'Entregue', CANCELADO: 'Cancelado' })[s] || s }

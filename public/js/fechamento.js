@@ -5,45 +5,23 @@ function renderFechamento() {
     db = loadDB();
     const allOrders = db.orders;
 
-    // Filtros de Status
     const cancelados = allOrders.filter(o => o.status === 'CANCELADO');
-    const concluidos = allOrders.filter(o => o.status !== 'CANCELADO'); // Inclui Entregues, Prontos, etc.
+    const concluidos = allOrders.filter(o => o.status !== 'CANCELADO');
 
-    // Cálculos Gerais
     const totalFaturamento = concluidos.reduce((acc, o) => acc + o.total, 0);
-    const qtdVendas = concluidos.length;
-    const qtdCancelados = cancelados.length;
+    $('valFaturamento').innerText = money(totalFaturamento);
+    $('valVendas').innerText = concluidos.length;
+    $('valCancelados').innerText = cancelados.length;
 
-    // Atualiza Cards Superiores
-    $('valFaturamento').innerText = money(totalFaturamento); $('valVendas').innerText = qtdVendas;
-    $('valCancelados').innerText = qtdCancelados;
-
-    // Agrupamento por Forma de Pagamento
-    const pagamentos = {
-        'PIX': 0,
-        'Cartão de Crédito': 0,
-        'Cartão de Débito': 0,
-        'Dinheiro': 0,
-        'Vale Alimentação/Refeição': 0
-    };
+    const pagamentos = { 'PIX': 0, 'Cartão de Crédito': 0, 'Cartão de Débito': 0, 'Dinheiro': 0, 'Vale Alimentação/Refeição': 0 };
 
     concluidos.forEach(o => {
         const metodo = o.paymentMethod || 'Dinheiro';
-        if (pagamentos[metodo] !== undefined) {
-            pagamentos[metodo] += o.total;
-        } else {
-            pagamentos['Dinheiro'] += o.total; // Fallback de segurança
-        }
+        if (pagamentos[metodo] !== undefined) pagamentos[metodo] += o.total;
+        else pagamentos['Dinheiro'] += o.total;
     });
 
-    // Renderiza os Cards de Pagamento
-    const icones = {
-        'PIX': 'ph-intersect',
-        'Cartão de Crédito': 'ph-credit-card',
-        'Cartão de Débito': 'ph-credit-card',
-        'Dinheiro': 'ph-money',
-        'Vale Alimentação/Refeição': 'ph-ticket'
-    };
+    const icones = { 'PIX': 'ph-intersect', 'Cartão de Crédito': 'ph-credit-card', 'Cartão de Débito': 'ph-credit-card', 'Dinheiro': 'ph-money', 'Vale Alimentação/Refeição': 'ph-ticket' };
 
     $('gridPagamentos').innerHTML = Object.keys(pagamentos).map(metodo => `
         <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
@@ -56,13 +34,10 @@ function renderFechamento() {
     `).join('');
 }
 
-// Botão de Encerrar Turno
 $('btnEncerrarCaixa').onclick = () => {
-    if (confirm('ATENÇÃO: Encerrar o caixa vai apagar todos os pedidos atuais do sistema para iniciar um novo turno. Imprima a tela ou anote os valores antes de continuar. Deseja confirmar?')) {
-        db.orders = []; // Zera a lista de pedidos
-        saveDB(db); // Dispara a sincronização via WebSocket para todos os PCs
-        renderFechamento();
-        toast('Turno encerrado e caixa zerado com sucesso.');
+    if (confirm('ATENÇÃO: Encerrar o caixa vai ocultar todos os pedidos de hoje das telas de preparo e zerar os contadores. Deseja confirmar?')) {
+        if (socket) socket.emit('closeRegister');
+        toast('Turno encerrado. Caixa zerado com sucesso.');
     }
 };
 

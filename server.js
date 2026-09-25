@@ -3,7 +3,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const sqlite3 = require('sqlite3').verbose();
 const { open } = require('sqlite');
-const crypto = require('crypto'); // Para gerar IDs únicos
+const crypto = require('crypto');
+const bcrypt = require('bcrypt'); // Adicionado para criptografia
 
 const app = express();
 const server = http.createServer(app);
@@ -19,7 +20,6 @@ async function initDB() {
         driver: sqlite3.Database
     });
 
-    // 1. CRIANDO AS TABELAS (Agora com a tabela 'users')
     await db.exec(`
         CREATE TABLE IF NOT EXISTS products (
             id TEXT PRIMARY KEY, name TEXT NOT NULL, price REAL NOT NULL, category TEXT, description TEXT, active INTEGER DEFAULT 1
@@ -31,19 +31,16 @@ async function initDB() {
             id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, role TEXT NOT NULL
         );
     `);
-    
-    try {
-        await db.exec('ALTER TABLE orders ADD COLUMN paymentMethod TEXT DEFAULT "Não informado"');
-    } catch (e) {
-        // Se cair aqui, a coluna já existe. Tudo certo!
-    }
 
-    // 2. CRIAR O ADMINISTRADOR PADRÃO SE NÃO EXISTIR
+    try { await db.exec('ALTER TABLE orders ADD COLUMN paymentMethod TEXT DEFAULT "Não informado"'); } catch (e) { }
+
+    // CRIAÇÃO DO ADMIN COM SENHA CRIPTOGRAFADA
     const userCount = await db.get('SELECT COUNT(*) as count FROM users');
     if (userCount.count === 0) {
         console.log("👤 Criando usuário Administrador padrão...");
+        const hashedPassword = await bcrypt.hash('admin123', 10);
         await db.run('INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), 'admin', 'admin123', 'admin']
+            [crypto.randomUUID(), 'admin', hashedPassword, 'admin']
         );
     }
     console.log("📦 Banco de dados SQLite conectado e pronto!");
@@ -51,32 +48,37 @@ async function initDB() {
 
 async function getFullState() {
     const productsRows = await db.all('SELECT * FROM products');
-    const ordersRows = await db.all('SELECT * FROM orders');
+    // Envia apenas os pedidos válidos para as telas, otimizando a memória!
+    const ordersRows = await db.all('SELECT * FROM orders WHERE status != "ARQUIVADO"');
+
     const formattedProducts = productsRows.map(p => ({ ...p, active: p.active === 1 }));
     const formattedOrders = ordersRows.map(o => ({ ...o, items: JSON.parse(o.items) }));
     return { products: formattedProducts, orders: formattedOrders };
 }
 
 io.on('connection', async (socket) => {
-    console.log(`📱 Dispositivo conectado: ${socket.id}`);
 
     // --- EVENTOS DE AUTENTICAÇÃO --- //
-
-    // Tentar Fazer Login
     socket.on('login', async (data, callback) => {
-        const user = await db.get('SELECT username, role FROM users WHERE username = ? AND password = ?', [data.username, data.password]);
+        const user = await db.get('SELECT * FROM users WHERE username = ?', [data.username]);
         if (user) {
-            callback({ success: true, user }); // Retorna os dados do usuário, mas NUNCA a senha
+            const match = await bcrypt.compare(data.password, user.password);
+            if (match) {
+                delete user.password; // Remove a senha antes de mandar pro front-end
+                callback({ success: true, user });
+            } else {
+                callback({ success: false, message: 'Usuário ou senha incorretos.' });
+            }
         } else {
-            callback({ success: false, message: 'Usuário ou senha incorretos.' });
+            callback({ success: false, message: 'Usuário não encontrado.' });
         }
     });
 
-    // Criar Novo Usuário
     socket.on('register', async (data, callback) => {
         try {
+            const hashedPassword = await bcrypt.hash(data.password, 10);
             await db.run('INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)',
-                [crypto.randomUUID(), data.username, data.password, data.role]
+                [crypto.randomUUID(), data.username, hashedPassword, 'user'] // Força role 'user'
             );
             callback({ success: true, message: 'Usuário criado com sucesso!' });
         } catch (error) {
@@ -84,34 +86,50 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // --- EVENTOS DO SISTEMA (Caixa/Cozinha) --- //
-    const currentState = await getFullState();
-    socket.emit('sync', currentState);
+    // --- EVENTOS DE SINCRONIZAÇÃO (AÇÕES ATÔMICAS) --- //
+    socket.emit('sync', await getFullState());
 
-    socket.on('updateDB', async (newDB) => {
-        try {
-            await db.exec('BEGIN TRANSACTION');
+    // 1. Pedidos
+    socket.on('newOrder', async (orderData) => {
+        await db.run(
+            'INSERT INTO orders (id, number, createdAt, status, customer, note, total, items, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [orderData.id, orderData.number, orderData.createdAt, orderData.status, orderData.customer, orderData.note, orderData.total, JSON.stringify(orderData.items), orderData.paymentMethod]
+        );
+        socket.broadcast.emit('orderAdded', orderData);
+    });
 
-            await db.exec('DELETE FROM products');
-            for (let p of newDB.products) {
-                await db.run('INSERT INTO products (id, name, price, category, description, active) VALUES (?, ?, ?, ?, ?, ?)', [p.id, p.name, p.price, p.category, p.description, p.active ? 1 : 0]);
-            }
+    socket.on('updateOrderStatus', async (data) => {
+        await db.run('UPDATE orders SET status = ? WHERE id = ?', [data.status, data.id]);
+        socket.broadcast.emit('orderStatusChanged', data);
+    });
 
-            await db.exec('DELETE FROM orders');
-            for (let o of newDB.orders) {
-                await db.run(
-                    'INSERT INTO orders (id, number, createdAt, status, customer, note, total, items, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [o.id, o.number, o.createdAt, o.status, o.customer, o.note, o.total, JSON.stringify(o.items), o.paymentMethod || 'Não informado']
-                );
-            }
+    // 2. Produtos
+    socket.on('addProduct', async (p) => {
+        await db.run('INSERT INTO products (id, name, price, category, description, active) VALUES (?, ?, ?, ?, ?, ?)',
+            [p.id, p.name, p.price, p.category, p.description, p.active ? 1 : 0]);
+        io.emit('sync', await getFullState());
+    });
 
-            await db.exec('COMMIT');
-            const updatedState = await getFullState();
-            socket.broadcast.emit('sync', updatedState);
-        } catch (error) {
-            await db.exec('ROLLBACK');
-            console.error("❌ Erro fatal ao salvar no banco:", error);
-        }
+    socket.on('updateProduct', async (p) => {
+        await db.run('UPDATE products SET name = ?, price = ?, category = ?, description = ?, active = ? WHERE id = ?',
+            [p.name, p.price, p.category, p.description, p.active ? 1 : 0, p.id]);
+        io.emit('sync', await getFullState());
+    });
+
+    socket.on('deleteProduct', async (id) => {
+        await db.run('DELETE FROM products WHERE id = ?', [id]);
+        io.emit('sync', await getFullState());
+    });
+
+    // 3. Fechamento e Histórico
+    socket.on('clearOrders', async () => {
+        await db.run('DELETE FROM orders');
+        io.emit('sync', await getFullState());
+    });
+
+    socket.on('closeRegister', async () => {
+        await db.run('UPDATE orders SET status = "ARQUIVADO" WHERE status != "ARQUIVADO"');
+        io.emit('sync', await getFullState());
     });
 });
 
