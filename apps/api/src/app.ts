@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import express, { type Express } from 'express';
+import express, { type Express, type Request } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Config } from './config.ts';
@@ -25,7 +25,28 @@ export function createApp({ services, logger, config }: AppDeps): Express {
       contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } },
     }),
   );
-  app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => !req.url?.startsWith('/api') } }));
+  app.use(
+    pinoHttp({
+      logger,
+      // Uma linha por requisição ("POST /api/orders 201 13ms"), sem cabeçalhos. Erros 500 já são
+      // registrados com detalhes pelo `errorHandler`.
+      quietReqLogger: true,
+      quietResLogger: true,
+      autoLogging: { ignore: (req) => !req.url?.startsWith('/api') || req.url === '/api/health' },
+      customSuccessObject: () => ({}),
+      customErrorObject: () => ({}),
+      customSuccessMessage: (req, res, ms) =>
+        `${req.method} ${(req as Request).originalUrl} ${res.statusCode} ${Math.round(ms)}ms`,
+      customErrorMessage: (req, res) => `${req.method} ${(req as Request).originalUrl} ${res.statusCode}`,
+      // Leituras ficam em `debug`; ações em `info`; falhas em `warn`/`error`. O 401 de "já estou logado?"
+      // ao abrir a tela de login é esperado e não vira alerta.
+      customLogLevel: (req, res, err) => {
+        if (err || res.statusCode >= 500) return 'error';
+        if (res.statusCode >= 400 && !(req.method === 'GET' && res.statusCode === 401)) return 'warn';
+        return req.method === 'GET' ? 'debug' : 'info';
+      },
+    }),
+  );
 
   const routeDeps = { services, sessionTtlMs: config.sessionTtlMs, cookieSecure: config.cookieSecure };
   app.use('/api', express.json({ limit: '20kb' }));
