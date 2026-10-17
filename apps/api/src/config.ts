@@ -18,6 +18,7 @@ const EnvSchema = z.object({
   COOKIE_SECURE: z.stringbool().default(false),
   ADMIN_PASSWORD: optional(z.string().min(8, 'ADMIN_PASSWORD precisa ter pelo menos 8 caracteres')),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  LOG_FORMAT: z.enum(['auto', 'pretty', 'json']).default('auto'),
 });
 
 export interface Config {
@@ -31,9 +32,15 @@ export interface Config {
   cookieSecure: boolean;
   adminPassword: string | undefined;
   logLevel: string;
+  /** `auto`: legível no terminal, JSON quando a saída é redirecionada (serviço, arquivo). */
+  logFormat: 'auto' | 'pretty' | 'json';
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+  // `apps/api/.env` é opcional; carregado aqui para não exibir aviso quando não existe.
+  const envFile = join(API_ROOT, '.env');
+  if (env === process.env && existsSync(envFile)) process.loadEnvFile(envFile);
+
   const parsed = EnvSchema.safeParse(env);
   if (!parsed.success) {
     throw new Error(`Configuração inválida:\n${z.prettifyError(parsed.error)}`);
@@ -51,5 +58,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cookieSecure: e.COOKIE_SECURE,
     adminPassword: e.ADMIN_PASSWORD,
     logLevel: e.LOG_LEVEL,
+    logFormat: e.LOG_FORMAT,
   };
 }

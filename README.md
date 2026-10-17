@@ -89,15 +89,16 @@ Rode **antes** de cadastrar dados no sistema novo. Quem ainda usa a senha padrã
 
 Copie `apps/api/.env.example` para `apps/api/.env`. Todas as variáveis são opcionais:
 
-| Variável            | Padrão             | Descrição                                             |
-| ------------------- | ------------------ | ----------------------------------------------------- |
-| `PORT`              | `3000`             | Porta da API                                          |
-| `HOST`              | `0.0.0.0`          | Use `127.0.0.1` para permitir acesso só nesta máquina |
-| `DB_PATH`           | `data/fastfood.db` | Caminho do banco (relativo a `apps/api`)              |
-| `SESSION_TTL_HOURS` | `168` (7 dias)     | Duração da sessão                                     |
-| `COOKIE_SECURE`     | `false`            | `true` somente se o sistema for servido via HTTPS     |
-| `ADMIN_PASSWORD`    | aleatória          | Senha do `admin` criado no primeiro uso               |
-| `LOG_LEVEL`         | `info`             | Nível de log (pino)                                   |
+| Variável            | Padrão             | Descrição                                                               |
+| ------------------- | ------------------ | ----------------------------------------------------------------------- |
+| `PORT`              | `3000`             | Porta da API                                                            |
+| `HOST`              | `0.0.0.0`          | Use `127.0.0.1` para permitir acesso só nesta máquina                   |
+| `DB_PATH`           | `data/fastfood.db` | Caminho do banco (relativo a `apps/api`)                                |
+| `SESSION_TTL_HOURS` | `168` (7 dias)     | Duração da sessão                                                       |
+| `COOKIE_SECURE`     | `false`            | `true` somente se o sistema for servido via HTTPS                       |
+| `ADMIN_PASSWORD`    | aleatória          | Senha do `admin` criado no primeiro uso                                 |
+| `LOG_LEVEL`         | `info`             | `info` mostra ações e falhas; `debug` inclui leituras                   |
+| `LOG_FORMAT`        | `auto`             | `auto` (legível no terminal, JSON se redirecionado), `pretty` ou `json` |
 
 ## 🧪 Qualidade
 
