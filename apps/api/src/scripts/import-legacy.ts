@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { PAYMENT_METHOD_LABELS, toCents, type OrderStatus, type PaymentMethod } from '@fastfood/shared';
+import { toCents, type OrderStatus, type PaymentMethod } from '@fastfood/shared';
 import { loadConfig } from '../config.ts';
 import { execute, openDatabase, queryAll, queryOne, transaction } from '../db/database.ts';
 import { migrate } from '../db/migrate.ts';
@@ -65,9 +65,14 @@ if (count('orders') > 0 || count('products') > 0) {
   process.exit(1);
 }
 
-const paymentByLabel = new Map(
-  Object.entries(PAYMENT_METHOD_LABELS).map(([code, label]) => [label, code as PaymentMethod]),
-);
+// Textos de forma de pagamento gravados pela v1.
+const paymentByLabel = new Map<string, PaymentMethod>([
+  ['PIX', 'PIX'],
+  ['Dinheiro', 'DINHEIRO'],
+  ['Cartão de Crédito', 'CARTAO'],
+  ['Cartão de Débito', 'CARTAO'],
+  ['Vale Alimentação/Refeição', 'VALE'],
+]);
 const STATUSES: OrderStatus[] = ['NOVO', 'EM_PREPARO', 'PRONTO', 'ENTREGUE', 'CANCELADO'];
 
 const users = legacy.prepare('SELECT * FROM users').all() as unknown as LegacyUser[];

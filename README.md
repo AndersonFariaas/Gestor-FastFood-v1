@@ -4,12 +4,12 @@ Sistema de gestão para lanchonetes: **frente de caixa (PDV)**, **tela da cozinh
 
 ## ✨ Funcionalidades
 
-- **Caixa:** busca e categorias, carrinho, forma de pagamento obrigatória, impressão automática de cupom.
+- **Caixa:** cardápio visual por categoria, busca com atalho `/`, pagamento em PIX, Dinheiro (com cálculo de troco) ou Cartão, confirmação com a senha em destaque, entrega dos pedidos prontos sem sair da tela e impressão de cupom.
 - **Cozinha:** pedidos novos e em preparo, cronômetro com alerta de atraso, aviso sonoro.
 - **Painel da TV:** senha chamada em destaque com som, lista de prontos e em preparo.
 - **Pedidos:** fluxo `Novo → Em preparo → Pronto → Entregue`, cancelamento com motivo (gerência).
 - **Fechamento:** faturamento (pedidos entregues) por forma de pagamento, turnos com histórico consultável. Só fecha quando não há pedidos em andamento.
-- **Cardápio e usuários:** CRUD completo, senha provisória no primeiro acesso, perfis Gerente/Operador.
+- **Cardápio e equipe:** CRUD completo, item esgotado com um toque, senha provisória no primeiro acesso, perfis Gerente/Operador.
 - **Funciona offline:** nenhuma dependência de CDN — ideal para a rede da loja.
 
 ## 🧱 Arquitetura

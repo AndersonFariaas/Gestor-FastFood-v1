@@ -30,6 +30,7 @@ import { errorMessage } from '@/services/http';
 import { useAuthStore } from '@/stores/auth';
 import { useOrdersStore } from '@/stores/orders';
 import { formatDateTime, formatTime, normalize } from '@/utils/format';
+import { PAYMENT_ICONS } from '@/utils/visuals';
 
 const auth = useAuthStore();
 const store = useOrdersStore();
@@ -137,18 +138,18 @@ const canCancel = (o: Order) =>
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl p-4 sm:p-8">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-8">
     <PageHeader
       title="Pedidos"
       :description="
         viewingPast
           ? 'Consulta de turno encerrado (somente leitura).'
-          : 'Acompanhe e finalize os pedidos do turno atual.'
+          : 'Acompanhe e finalize os pedidos do turno.'
       "
     >
       <template v-if="auth.isAdmin && history.length" #actions>
         <label class="sr-only" for="shift">Turno</label>
-        <select id="shift" v-model="shiftId" class="input w-auto">
+        <select id="shift" v-model="shiftId" class="input w-auto font-semibold">
           <option :value="null">Turno atual</option>
           <option v-for="h in history" :key="h.shift.id" :value="h.shift.id">
             Turno de {{ formatDateTime(h.shift.openedAt) }}
@@ -159,19 +160,19 @@ const canCancel = (o: Order) =>
 
     <div class="mb-6 grid gap-4 sm:grid-cols-3">
       <StatCard label="Pedidos" :value="source.length">
-        <template #icon><PhReceipt /></template>
+        <template #icon><PhReceipt weight="fill" /></template>
       </StatCard>
-      <StatCard label="Em andamento" :value="inProgress" tone="brand">
-        <template #icon><PhCookingPot /></template>
+      <StatCard label="Em andamento" :value="inProgress" tone="accent">
+        <template #icon><PhCookingPot weight="fill" /></template>
       </StatCard>
-      <StatCard label="Entregues (faturado)" :value="formatCents(deliveredCents)" tone="success">
-        <template #icon><PhCurrencyDollar /></template>
+      <StatCard label="Faturado (entregues)" :value="formatCents(deliveredCents)" tone="success">
+        <template #icon><PhCurrencyDollar weight="bold" /></template>
       </StatCard>
     </div>
 
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div
-        class="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1"
+        class="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 py-1"
         role="group"
         aria-label="Filtrar por status"
       >
@@ -179,58 +180,83 @@ const canCancel = (o: Order) =>
           v-for="s in [null, ...ORDER_STATUSES]"
           :key="s ?? 'all'"
           type="button"
-          class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-          :class="filter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+          class="flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all"
+          :class="
+            filter === s
+              ? 'bg-stone-900 text-white shadow-md'
+              : 'bg-white text-stone-600 ring-1 ring-stone-900/5 hover:bg-stone-50'
+          "
           :aria-pressed="filter === s"
           @click="filter = s"
         >
           {{ s ? ORDER_STATUS_LABELS[s] : 'Todos' }}
-          <span class="ml-1 text-xs text-gray-400 tabular-nums">{{ s ? counts[s] : source.length }}</span>
+          <span
+            class="rounded-full px-1.5 text-xs tabular-nums"
+            :class="filter === s ? 'bg-white/20' : 'bg-stone-100 text-stone-500'"
+          >
+            {{ s ? counts[s] : source.length }}
+          </span>
         </button>
       </div>
-      <div class="relative w-full sm:w-64">
-        <PhMagnifyingGlass class="absolute top-2.5 left-3 size-5 text-gray-400" aria-hidden="true" />
+      <div class="relative w-full sm:w-72">
+        <PhMagnifyingGlass
+          class="absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-stone-400"
+          aria-hidden="true"
+        />
         <input
           v-model="search"
           type="search"
-          class="input pl-10"
-          placeholder="Senha ou cliente..."
+          class="input pl-11"
+          placeholder="Buscar por senha ou cliente"
           aria-label="Buscar pedido"
         />
       </div>
     </div>
 
     <div class="card overflow-x-auto">
-      <table v-if="visible.length" class="w-full text-left text-sm">
-        <thead class="border-b border-gray-200 bg-gray-50 text-gray-600">
+      <table v-if="visible.length" class="data-table">
+        <thead>
           <tr>
-            <th scope="col" class="p-4 font-semibold">Senha</th>
-            <th scope="col" class="p-4 font-semibold">Hora</th>
-            <th scope="col" class="p-4 font-semibold">Cliente</th>
-            <th scope="col" class="p-4 font-semibold">Itens</th>
-            <th scope="col" class="p-4 font-semibold">Pagamento</th>
-            <th scope="col" class="p-4 font-semibold">Status</th>
-            <th scope="col" class="p-4 text-right font-semibold">Total</th>
-            <th v-if="!viewingPast" scope="col" class="p-4"><span class="sr-only">Ações</span></th>
+            <th scope="col">Senha</th>
+            <th scope="col">Hora</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Itens</th>
+            <th scope="col">Pagamento</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-right">Total</th>
+            <th v-if="!viewingPast" scope="col"><span class="sr-only">Ações</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr v-for="o in visible" :key="o.id" class="hover:bg-gray-50">
-            <td class="p-4 font-bold text-gray-900 tabular-nums">#{{ o.number }}</td>
-            <td class="p-4 text-gray-500 tabular-nums">{{ formatTime(o.createdAt) }}</td>
-            <td class="p-4 font-medium text-gray-800">{{ o.customer }}</td>
-            <td class="max-w-xs p-4 text-gray-500">
-              <p class="truncate" :title="itemsText(o)">{{ itemsText(o) }}</p>
-              <p v-if="o.note" class="truncate text-xs text-brand-600">Obs: {{ o.note }}</p>
-              <p v-if="o.cancelReason" class="truncate text-xs text-red-600">Motivo: {{ o.cancelReason }}</p>
+        <tbody>
+          <tr v-for="o in visible" :key="o.id" :class="o.status === 'PRONTO' && 'bg-brand-50/40'">
+            <td>
+              <span class="font-display text-lg font-bold text-stone-900 tabular-nums">{{ o.number }}</span>
             </td>
-            <td class="p-4 text-gray-600">{{ PAYMENT_METHOD_LABELS[o.paymentMethod] }}</td>
-            <td class="p-4"><StatusBadge :status="o.status" /></td>
-            <td class="p-4 text-right font-semibold text-gray-900 tabular-nums">
+            <td class="text-stone-500 tabular-nums">{{ formatTime(o.createdAt) }}</td>
+            <td class="font-semibold text-stone-800">{{ o.customer }}</td>
+            <td class="max-w-xs text-stone-500">
+              <p class="truncate" :title="itemsText(o)">{{ itemsText(o) }}</p>
+              <p v-if="o.note" class="truncate text-xs font-medium text-amber-700">Obs: {{ o.note }}</p>
+              <p v-if="o.cancelReason" class="truncate text-xs font-medium text-brand-700">
+                Motivo: {{ o.cancelReason }}
+              </p>
+            </td>
+            <td class="text-stone-600">
+              <span class="inline-flex items-center gap-1.5">
+                <component
+                  :is="PAYMENT_ICONS[o.paymentMethod]"
+                  class="size-4 text-stone-400"
+                  aria-hidden="true"
+                />
+                {{ PAYMENT_METHOD_LABELS[o.paymentMethod] }}
+              </span>
+            </td>
+            <td><StatusBadge :status="o.status" /></td>
+            <td class="text-right font-display font-semibold text-stone-900 tabular-nums">
               {{ formatCents(o.totalCents) }}
             </td>
-            <td v-if="!viewingPast" class="p-4">
-              <div class="flex justify-end gap-2">
+            <td v-if="!viewingPast">
+              <div class="flex justify-end gap-1">
                 <BaseButton
                   v-if="o.status === 'PRONTO'"
                   size="sm"
@@ -238,7 +264,7 @@ const canCancel = (o: Order) =>
                   :loading="busyId === o.id"
                   @click="deliver(o)"
                 >
-                  <PhCheck class="size-4" aria-hidden="true" /> Entregar
+                  <PhCheck class="size-4" weight="bold" aria-hidden="true" /> Entregar
                 </BaseButton>
                 <BaseButton
                   v-if="canCancel(o)"
@@ -246,9 +272,10 @@ const canCancel = (o: Order) =>
                   variant="ghost"
                   :disabled="busyId === o.id"
                   :aria-label="`Cancelar pedido ${o.number}`"
+                  title="Cancelar pedido"
                   @click="cancel(o)"
                 >
-                  <PhProhibit class="size-4 text-red-500" aria-hidden="true" />
+                  <PhProhibit class="size-5 text-brand-600" aria-hidden="true" />
                 </BaseButton>
               </div>
             </td>

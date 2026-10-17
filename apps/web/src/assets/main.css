@@ -1,33 +1,91 @@
 @import 'tailwindcss';
 
+/*
+ * Design system: identidade de fast food (vermelho + amarelo sobre fundo creme),
+ * tipografia Outfit para títulos/números e Inter para textos. Tudo empacotado localmente.
+ */
 @theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 
-  /* Cor da marca: centralizada aqui para trocar a identidade visual em um só lugar. */
-  --color-brand-50: var(--color-orange-50);
-  --color-brand-100: var(--color-orange-100);
-  --color-brand-200: var(--color-orange-200);
-  --color-brand-500: var(--color-orange-500);
-  --color-brand-600: var(--color-orange-600);
-  --color-brand-700: var(--color-orange-700);
+  --color-brand-50: #fff1f0;
+  --color-brand-100: #ffe0dd;
+  --color-brand-200: #ffc6c0;
+  --color-brand-300: #ff9d93;
+  --color-brand-400: #fb6a5c;
+  --color-brand-500: #ef3b2d;
+  --color-brand-600: #d62718;
+  --color-brand-700: #b31d11;
+  --color-brand-800: #941c13;
+  --color-brand-900: #7a1d16;
+  --color-brand-950: #430a06;
+
+  --color-accent-50: #fffbea;
+  --color-accent-100: #fff3c4;
+  --color-accent-200: #ffe685;
+  --color-accent-300: #ffd447;
+  --color-accent-400: #ffc21a;
+  --color-accent-500: #f9a908;
+  --color-accent-600: #dd8102;
+
+  --color-canvas: #f7f3ed;
+  --color-ink: #1c1917;
+
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 6px 20px -6px rgb(28 25 23 / 0.1);
+  --shadow-pop: 0 20px 50px -12px rgb(28 25 23 / 0.35);
 }
 
 @utility input {
-  @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 disabled:bg-gray-100;
+  @apply w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 transition outline-none placeholder:text-stone-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 disabled:bg-stone-100;
 }
 
 @utility label {
-  @apply mb-1 block text-sm font-medium text-gray-700;
+  @apply mb-1.5 block text-sm font-semibold text-stone-700;
+}
+
+/* Listas com rolagem horizontal (abas, chips) sem barra visível. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @utility card {
-  @apply rounded-xl border border-gray-200/70 bg-white shadow-sm;
+  @apply rounded-2xl bg-white shadow-card ring-1 ring-stone-900/5;
+}
+
+/* Tabelas de gestão (pedidos, cardápio, usuários, turnos). */
+@utility data-table {
+  @apply w-full text-left text-sm;
+
+  & thead {
+    @apply border-b border-stone-200 bg-stone-50 text-xs tracking-wide text-stone-500 uppercase;
+  }
+  & th {
+    @apply px-4 py-3 font-semibold;
+  }
+  & td {
+    @apply px-4 py-3.5;
+  }
+  & tbody tr {
+    @apply border-b border-stone-100 transition-colors last:border-0 hover:bg-stone-50/70;
+  }
 }
 
 @layer base {
+  html {
+    @apply bg-canvas text-stone-800 antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
   }
 }

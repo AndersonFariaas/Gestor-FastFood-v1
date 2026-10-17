@@ -44,13 +44,13 @@ export const router = createRouter({
       path: '/fechamento',
       name: 'closing',
       component: () => import('@/views/ClosingView.vue'),
-      meta: { title: 'Fechamento de caixa', adminOnly: true },
+      meta: { title: 'Caixa do dia', adminOnly: true },
     },
     {
       path: '/usuarios',
       name: 'users',
       component: () => import('@/views/UsersView.vue'),
-      meta: { title: 'Usuários', adminOnly: true },
+      meta: { title: 'Equipe', adminOnly: true },
     },
     {
       path: '/login',

@@ -1,8 +1,13 @@
 import { formatCents, PAYMENT_METHOD_LABELS, type Order } from '@fastfood/shared';
 import { escapeHtml as e, formatDateTime } from './format';
 
+interface CashInfo {
+  receivedCents: number | null;
+  changeCents: number | null;
+}
+
 /** Abre o cupom em uma janela e chama a impressão do navegador. Retorna `false` se o pop-up foi bloqueado. */
-export function printReceipt(order: Order, storeName = 'Lanchonete'): boolean {
+export function printReceipt(order: Order, cash?: CashInfo, storeName = 'Lanchonete'): boolean {
   const win = window.open('', '_blank', 'width=380,height=600');
   if (!win) return false;
 
@@ -30,6 +35,8 @@ export function printReceipt(order: Order, storeName = 'Lanchonete'): boolean {
     <table>
       <tr><td class="b">TOTAL</td><td class="r b">${formatCents(order.totalCents)}</td></tr>
       <tr><td>Pagamento</td><td class="r">${e(PAYMENT_METHOD_LABELS[order.paymentMethod])}</td></tr>
+      ${typeof cash?.receivedCents === 'number' ? `<tr><td>Recebido</td><td class="r">${formatCents(cash.receivedCents)}</td></tr>` : ''}
+      ${typeof cash?.changeCents === 'number' ? `<tr><td class="b">Troco</td><td class="r b">${formatCents(cash.changeCents)}</td></tr>` : ''}
     </table>
     <hr><div class="c">Obrigado pela preferência!</div>
     </body></html>`);

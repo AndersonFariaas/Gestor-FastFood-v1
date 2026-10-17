@@ -11,6 +11,7 @@ import { useToast } from '@/composables/useToast';
 import { errorMessage } from '@/services/http';
 import { useCatalogStore } from '@/stores/catalog';
 import { normalize } from '@/utils/format';
+import { categoryVisual } from '@/utils/visuals';
 
 const catalog = useCatalogStore();
 const dialog = useDialog();
@@ -20,6 +21,7 @@ const search = ref('');
 const category = ref('');
 const editing = ref<Product | null>(null);
 const modalOpen = ref(false);
+const toggling = ref<string | null>(null);
 
 const visible = computed(() => {
   const q = normalize(search.value.trim());
@@ -27,10 +29,25 @@ const visible = computed(() => {
     (p) => (!category.value || p.category === category.value) && (!q || normalize(p.name).includes(q)),
   );
 });
+const unavailableCount = computed(() => catalog.products.filter((p) => !p.active).length);
 
 function openEditor(product: Product | null) {
   editing.value = product;
   modalOpen.value = true;
+}
+
+/** Marca como esgotado/disponível sem abrir o formulário. */
+async function toggleActive(product: Product) {
+  toggling.value = product.id;
+  try {
+    const { id, ...data } = product;
+    await catalog.save(id, { ...data, active: !product.active });
+    toast.success(`${product.name} ${product.active ? 'indisponível' : 'disponível'} no caixa.`);
+  } catch (err) {
+    toast.error(errorMessage(err));
+  } finally {
+    toggling.value = null;
+  }
 }
 
 async function remove(product: Product) {
@@ -51,68 +68,111 @@ async function remove(product: Product) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl p-4 sm:p-8">
-    <PageHeader title="Cardápio" description="Gerencie os itens, preços e disponibilidade.">
+  <div class="mx-auto max-w-6xl px-4 py-6 sm:px-8">
+    <PageHeader
+      title="Cardápio"
+      :description="`${catalog.products.length} itens${unavailableCount ? ` · ${unavailableCount} indisponível(is)` : ''}`"
+    >
       <template #actions>
         <BaseButton @click="openEditor(null)"
-          ><PhPlus class="size-4" aria-hidden="true" /> Novo item</BaseButton
+          ><PhPlus class="size-5" weight="bold" aria-hidden="true" /> Novo item</BaseButton
         >
       </template>
     </PageHeader>
 
     <div class="mb-4 flex flex-wrap gap-3">
       <div class="relative min-w-60 flex-1">
-        <PhMagnifyingGlass class="absolute top-2.5 left-3 size-5 text-gray-400" aria-hidden="true" />
+        <PhMagnifyingGlass
+          class="absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-stone-400"
+          aria-hidden="true"
+        />
         <input
           v-model="search"
           type="search"
-          class="input pl-10"
-          placeholder="Buscar item..."
+          class="input pl-11"
+          placeholder="Buscar item"
           aria-label="Buscar item"
         />
       </div>
-      <select v-model="category" class="input w-auto" aria-label="Filtrar por categoria">
+      <select v-model="category" class="input w-auto font-semibold" aria-label="Filtrar por categoria">
         <option value="">Todas as categorias</option>
         <option v-for="c in catalog.categories" :key="c" :value="c">{{ c }}</option>
       </select>
     </div>
 
     <div class="card overflow-x-auto">
-      <table v-if="visible.length" class="w-full text-left text-sm">
-        <thead class="border-b border-gray-200 bg-gray-50 text-gray-600">
+      <table v-if="visible.length" class="data-table">
+        <thead>
           <tr>
-            <th scope="col" class="p-4 font-semibold">Item</th>
-            <th scope="col" class="p-4 font-semibold">Categoria</th>
-            <th scope="col" class="p-4 text-right font-semibold">Preço</th>
-            <th scope="col" class="p-4 font-semibold">Status</th>
-            <th scope="col" class="p-4"><span class="sr-only">Ações</span></th>
+            <th scope="col">Item</th>
+            <th scope="col">Categoria</th>
+            <th scope="col" class="text-right">Preço</th>
+            <th scope="col">Disponível</th>
+            <th scope="col"><span class="sr-only">Ações</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
-          <tr v-for="p in visible" :key="p.id" class="hover:bg-gray-50">
-            <td class="p-4">
-              <p class="font-semibold text-gray-900">{{ p.name }}</p>
-              <p v-if="p.description" class="text-gray-500">{{ p.description }}</p>
+        <tbody>
+          <tr v-for="p in visible" :key="p.id" :class="!p.active && 'opacity-60'">
+            <td>
+              <div class="flex items-center gap-3">
+                <span
+                  class="flex size-11 shrink-0 items-center justify-center rounded-xl"
+                  :class="categoryVisual(p.category).tile"
+                  aria-hidden="true"
+                >
+                  <component
+                    :is="categoryVisual(p.category).icon"
+                    class="size-6"
+                    :class="categoryVisual(p.category).iconClass"
+                    weight="duotone"
+                  />
+                </span>
+                <div class="min-w-0">
+                  <p class="font-semibold text-stone-900">{{ p.name }}</p>
+                  <p v-if="p.description" class="truncate text-xs text-stone-500">{{ p.description }}</p>
+                </div>
+              </div>
             </td>
-            <td class="p-4 text-gray-600">{{ p.category }}</td>
-            <td class="p-4 text-right font-semibold text-gray-900 tabular-nums">
+            <td class="text-stone-600">{{ p.category }}</td>
+            <td class="text-right font-display font-semibold text-stone-900 tabular-nums">
               {{ formatCents(p.priceCents) }}
             </td>
-            <td class="p-4">
-              <span
-                class="rounded-md px-2 py-0.5 text-xs font-bold"
-                :class="p.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+            <td>
+              <button
+                type="button"
+                role="switch"
+                :aria-checked="p.active"
+                :aria-label="`${p.name} disponível para venda`"
+                :disabled="toggling === p.id"
+                class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50"
+                :class="p.active ? 'bg-emerald-500' : 'bg-stone-300'"
+                @click="toggleActive(p)"
               >
-                {{ p.active ? 'Disponível' : 'Indisponível' }}
-              </span>
+                <span
+                  class="inline-block size-5 rounded-full bg-white shadow transition-transform"
+                  :class="p.active ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
             </td>
-            <td class="p-4">
+            <td>
               <div class="flex justify-end gap-1">
-                <BaseButton size="sm" variant="ghost" :aria-label="`Editar ${p.name}`" @click="openEditor(p)">
-                  <PhPencilSimple class="size-4 text-blue-600" aria-hidden="true" />
+                <BaseButton
+                  size="sm"
+                  variant="ghost"
+                  :aria-label="`Editar ${p.name}`"
+                  title="Editar"
+                  @click="openEditor(p)"
+                >
+                  <PhPencilSimple class="size-5" aria-hidden="true" />
                 </BaseButton>
-                <BaseButton size="sm" variant="ghost" :aria-label="`Excluir ${p.name}`" @click="remove(p)">
-                  <PhTrash class="size-4 text-red-500" aria-hidden="true" />
+                <BaseButton
+                  size="sm"
+                  variant="ghost"
+                  :aria-label="`Excluir ${p.name}`"
+                  title="Excluir"
+                  @click="remove(p)"
+                >
+                  <PhTrash class="size-5 text-brand-600" aria-hidden="true" />
                 </BaseButton>
               </div>
             </td>
@@ -123,7 +183,11 @@ async function remove(product: Product) {
         v-else
         :title="catalog.products.length ? 'Nenhum item encontrado' : 'Cardápio vazio'"
         :description="catalog.products.length ? undefined : 'Comece cadastrando o primeiro item.'"
-      />
+      >
+        <BaseButton v-if="!catalog.products.length" @click="openEditor(null)">
+          <PhPlus class="size-5" weight="bold" aria-hidden="true" /> Cadastrar item
+        </BaseButton>
+      </EmptyState>
     </div>
 
     <ProductFormModal :open="modalOpen" :product="editing" @close="modalOpen = false" />

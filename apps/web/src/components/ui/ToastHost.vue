@@ -5,19 +5,19 @@ import { useToast } from '@/composables/useToast';
 const { toasts, dismiss } = useToast();
 
 const STYLES = {
-  info: { class: 'bg-gray-900 text-white', icon: PhInfo },
-  success: { class: 'bg-green-700 text-white', icon: PhCheckCircle },
-  error: { class: 'bg-red-700 text-white', icon: PhWarningCircle },
+  info: { class: 'bg-stone-900 text-white', icon: PhInfo },
+  success: { class: 'bg-emerald-700 text-white', icon: PhCheckCircle },
+  error: { class: 'bg-brand-700 text-white', icon: PhWarningCircle },
 };
 </script>
 
 <template>
   <div
-    class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-full max-w-sm flex-col gap-2"
+    class="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-full max-w-sm -translate-x-1/2 flex-col gap-2 px-4"
     aria-live="polite"
   >
     <TransitionGroup
-      enter-from-class="translate-y-4 opacity-0"
+      enter-from-class="-translate-y-4 opacity-0"
       leave-to-class="opacity-0"
       enter-active-class="transition duration-200"
       leave-active-class="transition duration-200"
@@ -27,7 +27,7 @@ const STYLES = {
         :key="t.id"
         type="button"
         role="status"
-        class="pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium shadow-xl"
+        class="pointer-events-auto flex items-start gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold shadow-pop"
         :class="STYLES[t.tone].class"
         @click="dismiss(t.id)"
       >
