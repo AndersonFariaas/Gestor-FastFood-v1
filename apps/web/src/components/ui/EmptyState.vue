@@ -5,12 +5,14 @@ defineProps<{ title: string; description?: string }>();
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center px-6 py-12 text-center text-gray-500">
-    <slot name="icon">
-      <PhTray class="mb-3 size-10 text-gray-300" aria-hidden="true" />
-    </slot>
-    <p class="font-medium text-gray-700">{{ title }}</p>
-    <p v-if="description" class="mt-1 text-sm">{{ description }}</p>
-    <div v-if="$slots.default" class="mt-4"><slot /></div>
+  <div class="flex flex-col items-center justify-center px-6 py-14 text-center">
+    <div class="mb-4 flex size-16 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+      <slot name="icon">
+        <PhTray class="size-8" aria-hidden="true" />
+      </slot>
+    </div>
+    <p class="font-display text-lg font-semibold text-stone-800">{{ title }}</p>
+    <p v-if="description" class="mt-1 max-w-sm text-sm text-stone-500">{{ description }}</p>
+    <div v-if="$slots.default" class="mt-5"><slot /></div>
   </div>
 </template>

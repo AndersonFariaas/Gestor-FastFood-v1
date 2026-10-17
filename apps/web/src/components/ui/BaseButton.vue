@@ -4,8 +4,8 @@ import { computed } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'ghost';
-    size?: 'sm' | 'md' | 'lg';
+    variant?: 'primary' | 'accent' | 'dark' | 'secondary' | 'danger' | 'success' | 'ghost';
+    size?: 'sm' | 'md' | 'lg' | 'xl';
     type?: 'button' | 'submit';
     loading?: boolean;
     disabled?: boolean;
@@ -15,13 +15,21 @@ const props = withDefaults(
 );
 
 const VARIANTS = {
-  primary: 'bg-brand-500 text-white hover:bg-brand-600 focus-visible:ring-brand-500/40',
-  secondary: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:ring-gray-400/40',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500/40',
-  success: 'bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500/40',
-  ghost: 'text-gray-600 hover:bg-gray-100 focus-visible:ring-gray-400/40',
+  primary: 'bg-brand-600 text-white shadow-sm shadow-brand-900/20 hover:bg-brand-700 active:bg-brand-800',
+  accent:
+    'bg-accent-400 text-stone-900 shadow-sm shadow-accent-600/30 hover:bg-accent-300 active:bg-accent-500',
+  dark: 'bg-stone-900 text-white hover:bg-stone-800 active:bg-stone-950',
+  secondary: 'bg-white text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50 hover:ring-stone-300',
+  danger: 'bg-white text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50',
+  success: 'bg-emerald-600 text-white shadow-sm shadow-emerald-900/20 hover:bg-emerald-700',
+  ghost: 'text-stone-600 hover:bg-stone-900/5 hover:text-stone-900',
 };
-const SIZES = { sm: 'px-3 py-1.5 text-sm', md: 'px-4 py-2 text-sm', lg: 'px-5 py-3.5 text-base' };
+const SIZES = {
+  sm: 'h-9 px-3 text-sm rounded-lg',
+  md: 'h-11 px-4 text-sm rounded-xl',
+  lg: 'h-13 px-5 text-base rounded-xl',
+  xl: 'h-16 px-6 text-lg rounded-2xl font-display',
+};
 
 const classes = computed(() => [VARIANTS[props.variant], SIZES[props.size], props.block && 'w-full']);
 </script>
@@ -31,10 +39,10 @@ const classes = computed(() => [VARIANTS[props.variant], SIZES[props.size], prop
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading"
-    class="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors focus-visible:ring-4 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    class="inline-flex shrink-0 items-center justify-center gap-2 font-semibold whitespace-nowrap transition-all duration-150 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45"
     :class="classes"
   >
-    <PhSpinnerGap v-if="loading" class="size-4 animate-spin" aria-hidden="true" />
+    <PhSpinnerGap v-if="loading" class="size-5 animate-spin" aria-hidden="true" />
     <slot />
   </button>
 </template>

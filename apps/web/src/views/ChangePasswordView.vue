@@ -48,14 +48,16 @@ async function logout() {
 </script>
 
 <template>
-  <div class="flex min-h-dvh items-center justify-center bg-gray-100 p-4">
-    <div class="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
+  <div class="flex min-h-dvh items-center justify-center bg-canvas p-4">
+    <div class="card w-full max-w-sm rounded-3xl p-8">
       <div class="mb-6 text-center">
-        <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-brand-50">
-          <PhKey class="size-9 text-brand-500" weight="fill" aria-hidden="true" />
+        <div class="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-accent-400">
+          <PhKey class="size-9 text-stone-900" weight="fill" aria-hidden="true" />
         </div>
-        <h1 class="text-xl font-bold text-gray-900">{{ mandatory ? 'Defina sua senha' : 'Trocar senha' }}</h1>
-        <p class="mt-1 text-sm text-gray-500">
+        <h1 class="font-display text-2xl font-bold text-stone-900">
+          {{ mandatory ? 'Defina sua senha' : 'Trocar senha' }}
+        </h1>
+        <p class="mt-1 text-sm text-stone-500">
           {{
             mandatory
               ? 'Por segurança, troque a senha provisória antes de continuar.'
@@ -87,7 +89,7 @@ async function logout() {
             :minlength="MIN_LENGTH"
             required
           />
-          <p class="mt-1 text-xs text-gray-500">Mínimo de {{ MIN_LENGTH }} caracteres.</p>
+          <p class="mt-1 text-xs text-stone-500">Mínimo de {{ MIN_LENGTH }} caracteres.</p>
         </div>
         <div>
           <label class="label" for="confirm">Confirme a nova senha</label>
@@ -100,14 +102,18 @@ async function logout() {
             :aria-invalid="mismatch"
             required
           />
-          <p v-if="mismatch" class="mt-1 text-xs text-red-600">As senhas não conferem.</p>
+          <p v-if="mismatch" class="mt-1 text-xs font-medium text-brand-700">As senhas não conferem.</p>
         </div>
 
-        <p v-if="error" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p
+          v-if="error"
+          class="rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm font-medium text-brand-700"
+          role="alert"
+        >
           {{ error }}
         </p>
 
-        <BaseButton type="submit" size="lg" block :loading="loading" :disabled="!canSubmit"
+        <BaseButton type="submit" size="xl" block :loading="loading" :disabled="!canSubmit"
           >Salvar senha</BaseButton
         >
         <BaseButton v-if="mandatory" variant="ghost" block @click="logout">Sair</BaseButton>

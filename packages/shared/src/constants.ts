@@ -34,20 +34,25 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
 }
 
 /** Formas de pagamento disponíveis no caixa. */
-export const PAYMENT_METHODS = ['CREDITO', 'DEBITO', 'PIX', 'DINHEIRO', 'VALE'] as const;
+export const PAYMENT_METHODS = ['PIX', 'DINHEIRO', 'CARTAO'] as const;
 export type SelectablePaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-/** Inclui `NAO_INFORMADO`, usado apenas por pedidos importados do sistema antigo. */
-export type PaymentMethod = SelectablePaymentMethod | 'NAO_INFORMADO';
+/**
+ * Inclui códigos que só existem em pedidos antigos: `VALE` (opção descontinuada) e
+ * `NAO_INFORMADO` (pedidos importados da v1 sem forma de pagamento).
+ */
+export type PaymentMethod = SelectablePaymentMethod | 'VALE' | 'NAO_INFORMADO';
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  CREDITO: 'Cartão de Crédito',
-  DEBITO: 'Cartão de Débito',
   PIX: 'PIX',
   DINHEIRO: 'Dinheiro',
-  VALE: 'Vale Alimentação/Refeição',
+  CARTAO: 'Cartão',
+  VALE: 'Vale-refeição',
   NAO_INFORMADO: 'Não informado',
 };
+
+/** Nome usado quando o pedido é feito sem identificar o cliente. */
+export const DEFAULT_CUSTOMER = 'Balcão';
 
 /** Minutos sem atualização para um pedido ser destacado como atrasado na cozinha. */
 export const LATE_ORDER_MINUTES = 15;

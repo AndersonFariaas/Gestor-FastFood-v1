@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   canTransition,
+  DEFAULT_CUSTOMER,
   ORDER_STATUS_LABELS,
   type CreateOrderInput,
   type Order,
@@ -63,7 +64,7 @@ export function createOrdersService({ db, orders, products, shifts, bus }: Deps)
           shiftId: shift.id,
           number: orders.nextNumber(shift.id),
           status: 'NOVO',
-          customer: input.customer || 'Balcão',
+          customer: input.customer || DEFAULT_CUSTOMER,
           note: input.note,
           paymentMethod: input.paymentMethod,
           totalCents: items.reduce((sum, i) => sum + i.unitPriceCents * i.quantity, 0),

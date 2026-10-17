@@ -21,7 +21,7 @@ function confirm() {
 <template>
   <BaseModal :open="current !== null" :title="current?.title ?? ''" size="sm" @close="settle(null)">
     <form id="dialog-form" class="space-y-4" @submit.prevent="confirm">
-      <p v-if="current?.message" class="text-sm text-gray-600">{{ current.message }}</p>
+      <p v-if="current?.message" class="text-stone-600">{{ current.message }}</p>
       <div v-if="current?.input">
         <label class="label" for="dialog-input">{{ current.input.label }}</label>
         <input
@@ -37,11 +37,11 @@ function confirm() {
       </div>
     </form>
     <template #footer>
-      <BaseButton variant="secondary" @click="settle(null)">Voltar</BaseButton>
+      <BaseButton variant="ghost" @click="settle(null)">Voltar</BaseButton>
       <BaseButton
         type="submit"
         form="dialog-form"
-        :variant="current?.tone === 'danger' ? 'danger' : 'primary'"
+        :variant="current?.tone === 'danger' ? 'primary' : 'dark'"
         :disabled="!canConfirm"
       >
         {{ current?.confirmLabel ?? 'Confirmar' }}

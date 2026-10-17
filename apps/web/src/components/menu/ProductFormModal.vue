@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { fromCents, toCents, type Product } from '@fastfood/shared';
+import { formatCents, fromCents, toCents, type Product } from '@fastfood/shared';
 import { computed, reactive, ref, watch } from 'vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import { useToast } from '@/composables/useToast';
 import { errorMessage } from '@/services/http';
 import { useCatalogStore } from '@/stores/catalog';
+import { categoryVisual } from '@/utils/visuals';
 
 const props = defineProps<{ open: boolean; product: Product | null }>();
 const emit = defineEmits<{ close: [] }>();
@@ -38,6 +39,7 @@ const priceCents = computed(() => {
   const value = Number(form.price.replace(',', '.'));
   return form.price.trim() !== '' && Number.isFinite(value) && value >= 0 ? toCents(value) : null;
 });
+const preview = computed(() => categoryVisual(form.category));
 const valid = computed(() => form.name.trim() && form.category.trim() && priceCents.value !== null);
 
 async function submit() {
@@ -65,6 +67,20 @@ async function submit() {
 <template>
   <BaseModal :open="open" :title="product ? 'Editar item' : 'Novo item'" @close="emit('close')">
     <form id="product-form" class="space-y-4" @submit.prevent="submit">
+      <!-- Prévia de como o item aparece no caixa -->
+      <div
+        class="flex items-center gap-4 rounded-2xl bg-stone-50 p-3 ring-1 ring-stone-200"
+        aria-hidden="true"
+      >
+        <span class="flex size-16 shrink-0 items-center justify-center rounded-2xl" :class="preview.tile">
+          <component :is="preview.icon" class="size-9" :class="preview.iconClass" weight="duotone" />
+        </span>
+        <div class="min-w-0">
+          <p class="truncate font-display font-semibold text-stone-900">{{ form.name || 'Nome do item' }}</p>
+          <p class="text-xs text-stone-500">{{ form.category || 'Categoria' }}</p>
+          <p class="font-display font-bold text-brand-600 tabular-nums">{{ formatCents(priceCents ?? 0) }}</p>
+        </div>
+      </div>
       <div>
         <label class="label" for="p-name">Nome</label>
         <input id="p-name" v-model="form.name" class="input" maxlength="80" required autocomplete="off" />
@@ -110,14 +126,20 @@ async function submit() {
           autocomplete="off"
         />
       </div>
-      <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-        <input v-model="form.active" type="checkbox" class="size-4 accent-brand-500" />
+      <label class="flex items-center gap-2.5 text-sm font-semibold text-stone-700">
+        <input v-model="form.active" type="checkbox" class="size-5 rounded accent-brand-600" />
         Disponível para venda
       </label>
-      <p v-if="error" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{{ error }}</p>
+      <p
+        v-if="error"
+        class="rounded-xl bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700"
+        role="alert"
+      >
+        {{ error }}
+      </p>
     </form>
     <template #footer>
-      <BaseButton variant="secondary" @click="emit('close')">Cancelar</BaseButton>
+      <BaseButton variant="ghost" @click="emit('close')">Cancelar</BaseButton>
       <BaseButton type="submit" form="product-form" :loading="saving" :disabled="!valid">Salvar</BaseButton>
     </template>
   </BaseModal>

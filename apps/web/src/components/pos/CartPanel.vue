@@ -1,54 +1,44 @@
 <script setup lang="ts">
+import { formatCents, PAYMENT_METHOD_LABELS } from '@fastfood/shared';
 import {
-  formatCents,
-  PAYMENT_METHOD_LABELS,
-  PAYMENT_METHODS,
-  type SelectablePaymentMethod,
-} from '@fastfood/shared';
-import {
-  PhCreditCard,
+  PhCheckCircle,
   PhMinus,
-  PhMoney,
-  PhPaperPlaneRight,
-  PhPixLogo,
+  PhNotePencil,
   PhPlus,
-  PhReceipt,
-  PhShoppingCart,
-  PhTicket,
+  PhPrinter,
+  PhShoppingBagOpen,
+  PhTrash,
+  PhUser,
+  PhX,
 } from '@phosphor-icons/vue';
 import { ref } from 'vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import { useSettings } from '@/composables/useSettings';
 import { useToast } from '@/composables/useToast';
 import { errorMessage } from '@/services/http';
 import { useCartStore } from '@/stores/cart';
 import { useOrdersStore } from '@/stores/orders';
-import { printReceipt } from '@/utils/receipt';
+import { categoryVisual } from '@/utils/visuals';
+import CashChange from './CashChange.vue';
+import PaymentSelector from './PaymentSelector.vue';
+import type { SentOrder } from './types';
+
+defineProps<{ closable?: boolean; lastSent?: SentOrder | null }>();
+const emit = defineEmits<{ sent: [result: SentOrder]; reprint: [result: SentOrder]; close: [] }>();
 
 const cart = useCartStore();
 const orders = useOrdersStore();
-const settings = useSettings();
 const toast = useToast();
 const sending = ref(false);
-
-const PAYMENT_ICONS: Record<SelectablePaymentMethod, typeof PhMoney> = {
-  CREDITO: PhCreditCard,
-  DEBITO: PhCreditCard,
-  PIX: PhPixLogo,
-  DINHEIRO: PhMoney,
-  VALE: PhTicket,
-};
 
 async function submit() {
   if (!cart.canSubmit || sending.value) return;
   sending.value = true;
   try {
+    const receivedCents = cart.isCash ? cart.cashReceivedCents : null;
+    const changeCents = cart.changeCents;
     const order = await orders.create(cart.toOrderInput());
     cart.clear();
-    toast.success(`Pedido #${order.number} enviado para a cozinha!`);
-    if (settings.value.autoPrint && !printReceipt(order)) {
-      toast.error('O navegador bloqueou a janela de impressão. Libere pop-ups para este site.');
-    }
+    emit('sent', { order, receivedCents, changeCents });
   } catch (err) {
     toast.error(errorMessage(err));
   } finally {
@@ -58,114 +48,189 @@ async function submit() {
 </script>
 
 <template>
-  <aside class="flex min-h-0 flex-col border-gray-200 bg-white lg:border-l" aria-label="Pedido atual">
-    <div class="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-4">
-      <h2 class="flex items-center gap-2 font-bold text-gray-800">
-        <PhShoppingCart class="size-5" aria-hidden="true" /> Pedido atual
-        <span v-if="cart.itemCount" class="text-sm font-normal text-gray-500"
-          >({{ cart.itemCount }} itens)</span
+  <div class="flex h-full min-h-0 flex-col bg-white">
+    <header class="flex items-center justify-between gap-3 border-b border-stone-100 px-5 py-4">
+      <h2 class="flex items-center gap-2 font-display text-xl font-bold text-stone-900">
+        Pedido
+        <span
+          v-if="cart.itemCount"
+          class="rounded-full bg-brand-600 px-2 py-0.5 font-sans text-xs font-bold text-white tabular-nums"
         >
+          {{ cart.itemCount }}
+        </span>
       </h2>
-      <button
-        v-if="!cart.isEmpty"
-        type="button"
-        class="text-sm font-medium text-red-500 hover:text-red-700"
-        @click="cart.clear()"
-      >
-        Limpar
-      </button>
-    </div>
-
-    <div class="min-h-40 flex-1 space-y-3 overflow-y-auto p-5">
-      <div v-if="cart.isEmpty" class="flex h-full flex-col items-center justify-center text-gray-400">
-        <PhReceipt class="mb-3 size-12" aria-hidden="true" />
-        <p>Nenhum item adicionado.</p>
+      <div class="flex items-center gap-1">
+        <BaseButton v-if="!cart.isEmpty" variant="ghost" size="sm" @click="cart.clear()">
+          <PhTrash class="size-4" aria-hidden="true" /> Limpar
+        </BaseButton>
+        <button
+          v-if="closable"
+          type="button"
+          class="rounded-full p-2 text-stone-500 hover:bg-stone-100"
+          aria-label="Fechar pedido"
+          @click="emit('close')"
+        >
+          <PhX class="size-5" weight="bold" />
+        </button>
       </div>
-      <div
-        v-for="line in cart.lines"
-        :key="line.productId"
-        class="rounded-xl border border-gray-100 p-3 shadow-sm"
-      >
-        <div class="mb-2 flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="truncate text-sm font-semibold text-gray-800">{{ line.name }}</p>
-            <p class="text-xs text-gray-500">{{ formatCents(line.unitPriceCents) }} cada</p>
+    </header>
+
+    <!-- Itens -->
+    <div class="min-h-32 flex-1 overflow-y-auto px-5 py-3">
+      <div v-if="cart.isEmpty" class="flex h-full flex-col justify-center gap-6 py-4">
+        <!-- Último pedido enviado: confere o troco ou reimprime sem bloquear o próximo atendimento. -->
+        <section
+          v-if="lastSent"
+          class="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200"
+          aria-label="Último pedido enviado"
+          aria-live="polite"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p
+                class="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-emerald-700 uppercase"
+              >
+                <PhCheckCircle class="size-4" weight="fill" aria-hidden="true" /> Pedido enviado
+              </p>
+              <p class="mt-1 font-display text-4xl leading-none font-bold text-stone-900 tabular-nums">
+                {{ lastSent.order.number }}
+              </p>
+              <p class="mt-1 truncate text-sm font-medium text-stone-600">{{ lastSent.order.customer }}</p>
+            </div>
+            <BaseButton variant="secondary" size="sm" @click="emit('reprint', lastSent)">
+              <PhPrinter class="size-4" aria-hidden="true" /> Reimprimir
+            </BaseButton>
           </div>
-          <p class="font-semibold text-gray-900 tabular-nums">
-            {{ formatCents(line.unitPriceCents * line.quantity) }}
+          <dl class="mt-3 space-y-1 border-t border-emerald-200 pt-3 text-sm">
+            <div class="flex justify-between">
+              <dt class="text-stone-500">
+                Total · {{ PAYMENT_METHOD_LABELS[lastSent.order.paymentMethod] }}
+              </dt>
+              <dd class="font-display font-semibold tabular-nums">
+                {{ formatCents(lastSent.order.totalCents) }}
+              </dd>
+            </div>
+            <div v-if="lastSent.changeCents !== null" class="flex items-baseline justify-between">
+              <dt class="font-semibold text-emerald-800">Troco</dt>
+              <dd class="font-display text-2xl font-bold text-emerald-800 tabular-nums">
+                {{ formatCents(lastSent.changeCents) }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <div class="text-center">
+          <div
+            class="mx-auto mb-3 flex size-16 items-center justify-center rounded-full bg-accent-100 text-accent-600"
+          >
+            <PhShoppingBagOpen class="size-8" weight="duotone" aria-hidden="true" />
+          </div>
+          <p class="font-display font-semibold text-stone-800">
+            {{ lastSent ? 'Próximo pedido' : 'Pedido vazio' }}
           </p>
-        </div>
-        <div class="inline-flex items-center rounded-lg bg-gray-50 p-1">
-          <button
-            type="button"
-            class="flex size-8 items-center justify-center rounded-md bg-white text-gray-600 shadow-sm hover:text-brand-600"
-            :aria-label="`Remover uma unidade de ${line.name}`"
-            @click="cart.changeQuantity(line.productId, -1)"
-          >
-            <PhMinus class="size-4" />
-          </button>
-          <span class="w-9 text-center text-sm font-bold tabular-nums">{{ line.quantity }}</span>
-          <button
-            type="button"
-            class="flex size-8 items-center justify-center rounded-md bg-white text-gray-600 shadow-sm hover:text-brand-600"
-            :aria-label="`Adicionar uma unidade de ${line.name}`"
-            @click="cart.changeQuantity(line.productId, 1)"
-          >
-            <PhPlus class="size-4" />
-          </button>
+          <p class="mt-1 text-sm text-stone-500">Toque nos produtos para adicionar.</p>
         </div>
       </div>
+
+      <TransitionGroup
+        tag="ul"
+        class="divide-y divide-stone-100"
+        enter-from-class="opacity-0 -translate-x-2"
+        enter-active-class="transition duration-200"
+        leave-to-class="opacity-0"
+        leave-active-class="transition duration-150"
+      >
+        <li v-for="line in cart.lines" :key="line.productId" class="flex items-center gap-3 py-3">
+          <span
+            class="flex size-11 shrink-0 items-center justify-center rounded-xl"
+            :class="categoryVisual(line.category).tile"
+            aria-hidden="true"
+          >
+            <component
+              :is="categoryVisual(line.category).icon"
+              class="size-6"
+              :class="categoryVisual(line.category).iconClass"
+              weight="duotone"
+            />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-stone-900">{{ line.name }}</p>
+            <p class="font-display text-sm font-semibold text-stone-500 tabular-nums">
+              {{ formatCents(line.unitPriceCents * line.quantity) }}
+            </p>
+          </div>
+          <div class="flex items-center rounded-full bg-stone-100 p-1">
+            <button
+              type="button"
+              class="flex size-8 items-center justify-center rounded-full bg-white text-stone-700 shadow-sm transition hover:text-brand-600"
+              :aria-label="line.quantity === 1 ? `Remover ${line.name}` : `Diminuir ${line.name}`"
+              @click="cart.changeQuantity(line.productId, -1)"
+            >
+              <component :is="line.quantity === 1 ? PhTrash : PhMinus" class="size-4" weight="bold" />
+            </button>
+            <span class="w-8 text-center font-display font-bold tabular-nums" aria-live="polite">{{
+              line.quantity
+            }}</span>
+            <button
+              type="button"
+              class="flex size-8 items-center justify-center rounded-full bg-white text-stone-700 shadow-sm transition hover:text-brand-600"
+              :aria-label="`Aumentar ${line.name}`"
+              @click="cart.changeQuantity(line.productId, 1)"
+            >
+              <PhPlus class="size-4" weight="bold" />
+            </button>
+          </div>
+        </li>
+      </TransitionGroup>
     </div>
 
-    <form class="space-y-3 border-t border-gray-200 bg-gray-50 p-5" @submit.prevent="submit">
-      <input
-        v-model="cart.customer"
-        class="input"
-        placeholder="Cliente / mesa (opcional)"
-        maxlength="60"
-        aria-label="Cliente ou mesa"
-        autocomplete="off"
-      />
-      <input
-        v-model="cart.note"
-        class="input"
-        placeholder="Observação (ex.: sem cebola)"
-        maxlength="200"
-        aria-label="Observação"
-        autocomplete="off"
-      />
-
-      <fieldset>
-        <legend class="label">Forma de pagamento</legend>
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-          <label
-            v-for="method in PAYMENT_METHODS"
-            :key="method"
-            class="flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors"
-            :class="
-              cart.paymentMethod === method
-                ? 'border-brand-500 bg-brand-50 text-brand-700'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-            "
-          >
-            <input v-model="cart.paymentMethod" type="radio" name="payment" :value="method" class="sr-only" />
-            <component :is="PAYMENT_ICONS[method]" class="size-4 shrink-0" aria-hidden="true" />
-            <span class="leading-tight">{{ PAYMENT_METHOD_LABELS[method] }}</span>
-          </label>
+    <!-- Fechamento do pedido -->
+    <form class="space-y-4 border-t border-stone-100 bg-white px-5 pt-4 pb-5" @submit.prevent="submit">
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        <div class="relative">
+          <PhUser class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400" aria-hidden="true" />
+          <input
+            v-model="cart.customer"
+            class="input pl-9"
+            placeholder="Nome do cliente"
+            maxlength="60"
+            aria-label="Nome do cliente ou mesa"
+            autocomplete="off"
+          />
         </div>
-      </fieldset>
-
-      <div class="flex items-center justify-between pt-1">
-        <span class="font-medium text-gray-600">Total</span>
-        <strong class="text-2xl font-bold text-gray-900 tabular-nums">{{
-          formatCents(cart.totalCents)
-        }}</strong>
+        <div class="relative">
+          <PhNotePencil
+            class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400"
+            aria-hidden="true"
+          />
+          <input
+            v-model="cart.note"
+            class="input pl-9"
+            placeholder="Observação"
+            maxlength="200"
+            aria-label="Observação para a cozinha"
+            autocomplete="off"
+          />
+        </div>
       </div>
 
-      <BaseButton type="submit" size="lg" block :loading="sending" :disabled="!cart.canSubmit">
-        <PhPaperPlaneRight class="size-5" aria-hidden="true" />
-        {{ !cart.isEmpty && !cart.paymentMethod ? 'Escolha o pagamento' : 'Enviar pedido' }}
+      <PaymentSelector :model-value="cart.paymentMethod" @update:model-value="cart.setPaymentMethod" />
+      <CashChange
+        v-if="cart.isCash && !cart.isEmpty"
+        v-model="cart.cashReceivedCents"
+        :total-cents="cart.totalCents"
+      />
+
+      <div class="flex items-end justify-between">
+        <span class="text-sm font-semibold text-stone-500">Total</span>
+        <span class="font-display text-3xl font-bold text-stone-900 tabular-nums">{{
+          formatCents(cart.totalCents)
+        }}</span>
+      </div>
+
+      <BaseButton type="submit" size="xl" block :loading="sending" :disabled="!cart.canSubmit">
+        {{ cart.blocker ?? 'Finalizar pedido' }}
       </BaseButton>
     </form>
-  </aside>
+  </div>
 </template>

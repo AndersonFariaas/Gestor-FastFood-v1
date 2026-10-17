@@ -7,11 +7,11 @@ const props = withDefaults(defineProps<{ dark?: boolean }>(), { dark: false });
 const view = computed(() => {
   switch (connectionState.value) {
     case 'online':
-      return { label: 'Online', dot: 'bg-green-500' };
+      return { label: 'Online', dot: 'bg-emerald-400' };
     case 'connecting':
-      return { label: 'Reconectando...', dot: 'bg-amber-500 animate-pulse' };
+      return { label: 'Conectando...', dot: 'bg-accent-400 animate-pulse' };
     default:
-      return { label: 'Offline', dot: 'bg-gray-400' };
+      return { label: 'Offline', dot: 'bg-stone-400' };
   }
 });
 </script>
@@ -19,7 +19,7 @@ const view = computed(() => {
 <template>
   <span
     class="inline-flex items-center gap-2 text-xs font-medium"
-    :class="props.dark ? 'text-gray-400' : 'text-gray-500'"
+    :class="props.dark ? 'text-stone-400' : 'text-stone-500'"
     role="status"
     :title="`Tempo real: ${view.label}`"
   >
