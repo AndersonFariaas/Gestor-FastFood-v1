@@ -1,52 +1,68 @@
-// ====== 1. SISTEMA DE SEGURANÇA E SESSÃO ====== //
-const currentPage = document.body.dataset ? document.body.dataset.page : '';
-let session = null;
+// ====== 1. SESSÃO ====== //
+// A sessão fica num cookie httpOnly; o servidor valida o login e as permissões.
+const currentPage = document.body.dataset.page || '';
+let currentUser = null;
 
-try {
-    session = JSON.parse(localStorage.getItem('lanchonete_session'));
-} catch (e) {
-    localStorage.removeItem('lanchonete_session');
+try { localStorage.removeItem('lanchonete_session'); } catch (e) { } // sessão antiga, anterior ao login no servidor
+
+function loginUrl() {
+    const file = window.location.pathname.split('/').pop() || 'index.html';
+    return `login.html?redirect=${encodeURIComponent(file)}`;
 }
 
-let currentFile = window.location.pathname.split('/').pop();
-if (currentFile === '' || currentFile === '/') currentFile = 'index.html';
-
-if (!session && currentPage !== 'login') {
-    window.location.href = `login.html?redirect=${currentFile}`;
+async function logout() {
+    try { await fetch('/api/logout', { method: 'POST' }); } finally { window.location.href = 'login.html'; }
 }
 
-if (session && currentPage !== 'login') {
+function applySession(user) {
+    currentUser = user;
+
+    // Só injeta o botão de "Sair" se NÃO for a Cozinha e NÃO for o Painel.
     const headerTitle = document.querySelector('header h1');
-
-    // AQUI ESTÁ A MÁGICA: Só injeta o botão de "Sair" se NÃO for a Cozinha e NÃO for o Painel.
     if (headerTitle && !document.getElementById('user-info-header') && currentPage !== 'cozinha' && currentPage !== 'painel') {
-        headerTitle.innerHTML += `<div id="user-info-header" class="block text-sm font-normal text-gray-500 mt-1"><i class="ph ph-user"></i> ${session.username} (${session.role === 'admin' ? 'Gerente' : 'Operador'}) | <button onclick="logout()" class="text-red-500 hover:underline cursor-pointer">Sair</button></div>`;
+        headerTitle.insertAdjacentHTML('beforeend', `<div id="user-info-header" class="block text-sm font-normal text-gray-500 mt-1"><i class="ph ph-user"></i> ${esc(user.username)} (${user.role === 'admin' ? 'Gerente' : 'Operador'}) | <button type="button" class="text-red-500 hover:underline cursor-pointer">Sair</button></div>`);
+        document.querySelector('#user-info-header button').onclick = logout;
     }
 
-    if (session.role === 'user') {
-        if (currentPage === 'cardapio' || currentPage === 'fechamento') {
-            alert('Acesso negado. Área restrita à gerência.');
-            window.location.href = 'index.html';
+    // Esconde o que é exclusivo da gerência (o servidor também bloqueia essas ações).
+    if (user.role !== 'admin') {
+        document.querySelectorAll('[data-admin-only], #configModal a[href="cardapio.html"], #configModal a[href="fechamento.html"]').forEach(el => el.remove());
+
+        // Reajusta o layout para o botão "Pedidos" não ficar pequeno no canto
+        const gridBotoes = document.getElementById('gridBotoesConfig');
+        if (gridBotoes) {
+            gridBotoes.classList.remove('grid-cols-3');
+            gridBotoes.classList.add('grid-cols-1');
         }
     }
 }
 
-function logout() {
-    localStorage.removeItem('lanchonete_session');
-    window.location.href = 'login.html';
-}
-
 // ====== 2. COMUNICAÇÃO COM O SERVIDOR ====== //
-const socket = typeof io !== 'undefined' ? io() : null;
+const socket = currentPage !== 'login' && typeof io !== 'undefined' ? io() : null;
 let localDB = { products: [], orders: [] };
 
 if (socket) {
+    socket.on('connect_error', (err) => {
+        if (err.message === 'unauthorized') window.location.href = loginUrl();
+    });
+
+    // O servidor encerrou a conexão (logout ou sessão inválida).
+    socket.on('disconnect', (reason) => {
+        if (reason === 'io server disconnect') window.location.href = loginUrl();
+    });
+
+    socket.on('session', (user) => {
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => applySession(user));
+        else applySession(user);
+    });
+
     socket.on('sync', (serverDB) => {
         localDB = serverDB;
         window.dispatchEvent(new Event('dbchange'));
     });
 
     socket.on('orderAdded', (newOrder) => {
+        if (localDB.orders.some(o => o.id === newOrder.id)) return;
         localDB.orders.push(newOrder);
         window.dispatchEvent(new Event('dbchange'));
 
@@ -69,50 +85,59 @@ if (socket) {
     });
 }
 
+// Envia um evento e aguarda a confirmação do servidor. Rejeita com uma mensagem pronta para o usuário.
+function request(event, payload) {
+    return new Promise((resolve, reject) => {
+        if (!socket || !socket.connected) return reject(new Error('Sem conexão com o servidor.'));
+        socket.timeout(8000).emit(event, payload, (err, res) => {
+            if (err) return reject(new Error('O servidor não respondeu. Tente novamente.'));
+            if (!res || !res.ok) return reject(new Error(res?.message || 'Erro inesperado.'));
+            resolve(res.data);
+        });
+    });
+}
+
 function loadDB() {
     return structuredClone(localDB);
 }
 
-function sendNewOrder(order) {
-    if (socket) {
-        socket.emit('newOrder', order);
-        localDB.orders.push(order);
-        window.dispatchEvent(new Event('dbchange'));
-
-        // Manda imprimir automaticamente (se estiver ativado nas configurações)
-        printReceipt(order);
-    }
+// O servidor calcula preço, total e número da senha; aqui só mandamos os itens e quantidades.
+async function sendNewOrder(payload) {
+    const order = await request('newOrder', payload);
+    // Manda imprimir automaticamente (se estiver ativado nas configurações)
+    printReceipt(order);
+    return order;
 }
 
 function changeOrderStatus(orderId, newStatus) {
-    if (socket) {
-        socket.emit('updateOrderStatus', { id: orderId, status: newStatus });
-        const order = localDB.orders.find(o => o.id === orderId);
-        if (order) order.status = newStatus;
-        window.dispatchEvent(new Event('dbchange'));
-    }
+    return request('updateOrderStatus', { id: orderId, status: newStatus }).catch(err => toast(err.message));
 }
 
 // ====== 3. FUNÇÕES UTILITÁRIAS ====== //
 function money(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
-function uid(prefix = 'id') { return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7) }
 function esc(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])) }
 
 function toast(msg) {
     const el = document.getElementById('toast');
     if (!el) return;
-    el.innerHTML = `<i class="ph-fill ph-info"></i> ${msg}`;
-    el.classList.remove('translate-y-20', 'opacity-0');
+    // Guarda as classes que escondem o toast (cada página posiciona o seu)
+    el._hiddenClasses ??= [...el.classList].filter(c => c.includes('translate-y') || c === 'opacity-0');
+
+    const icon = document.createElement('i');
+    icon.className = 'ph-fill ph-info';
+    el.replaceChildren(icon, document.createTextNode(` ${msg}`));
+    el.classList.remove(...el._hiddenClasses);
     clearTimeout(window._toast);
     window._toast = setTimeout(() => {
-        el.classList.add('translate-y-20', 'opacity-0');
+        el.classList.add(...el._hiddenClasses);
     }, 3000);
 }
 
 function statusLabel(s) { return ({ NOVO: 'Novo', EM_PREPARO: 'Em preparo', PRONTO: 'Pronto', ENTREGUE: 'Entregue', CANCELADO: 'Cancelado' })[s] || s }
 
 // ====== 4. MENU INTELIGENTE, MODAL E IMPRESSÃO ====== //
-let configImpressora = JSON.parse(localStorage.getItem('lanchonete_printer')) || { autoPrint: false };
+let configImpressora = { autoPrint: false };
+try { configImpressora = JSON.parse(localStorage.getItem('lanchonete_printer')) || configImpressora; } catch (e) { }
 
 // Garante que o HTML já carregou antes de colocar as animações
 document.addEventListener('DOMContentLoaded', () => {
@@ -137,18 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 toast(e.target.checked ? 'Impressão automática ativada!' : 'Impressão desativada.');
             };
         }
-
-        // Bloqueia ícones do painel administrativo se o operador for comum
-        if (session && session.role === 'user') {
-            document.querySelectorAll('#configModal a[href="cardapio.html"], #configModal a[href="fechamento.html"]').forEach(el => el.style.display = 'none');
-
-            // Reajusta o layout para o botão "Pedidos" não ficar pequeno no canto
-            const gridBotoes = document.getElementById('gridBotoesConfig');
-            if (gridBotoes) {
-                gridBotoes.classList.remove('grid-cols-3');
-                gridBotoes.classList.add('grid-cols-1');
-            }
-        }
     }
 });
 
@@ -160,7 +173,7 @@ function printReceipt(order) {
     printWindow.document.write(`
         <html>
         <head>
-            <title>Cupom #${order.number}</title>
+            <title>Cupom #${esc(order.number)}</title>
             <style>
                 body { font-family: monospace; width: 300px; margin: 0; padding: 10px; font-size: 12px; }
                 .center { text-align: center; }
@@ -173,19 +186,19 @@ function printReceipt(order) {
         </head>
         <body>
             <div class="center bold">SISTEMA FAST-FOOD</div>
-            <div class="center">Pedido #${order.number}</div>
+            <div class="center">Pedido #${esc(order.number)}</div>
             <div class="center">Data: ${new Date(order.createdAt).toLocaleString('pt-BR')}</div>
             <div class="line"></div>
-            <div>Cliente: ${order.customer}</div>
-            ${order.note ? `<div>Obs: ${order.note}</div>` : ''}
+            <div>Cliente: ${esc(order.customer)}</div>
+            ${order.note ? `<div>Obs: ${esc(order.note)}</div>` : ''}
             <div class="line"></div>
             <table>
-                ${order.items.map(i => `<tr><td>${i.qty}x${i.name}</td><td class="right">${money(i.price * i.qty)}</td></tr>`).join('')}
+                ${order.items.map(i => `<tr><td>${esc(i.qty)}x ${esc(i.name)}</td><td class="right">${money(i.price * i.qty)}</td></tr>`).join('')}
             </table>
             <div class="line"></div>
             <table>
                 <tr><td class="bold">TOTAL</td><td class="right bold">${money(order.total)}</td></tr>
-                <tr><td>Pagamento</td><td class="right">${order.paymentMethod}</td></tr>
+                <tr><td>Pagamento</td><td class="right">${esc(order.paymentMethod)}</td></tr>
             </table>
             <div class="line"></div>
             <div class="center">Obrigado pela preferência!</div>

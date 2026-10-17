@@ -1,20 +1,15 @@
-const urlParams = new URLSearchParams(window.location.search);
-const redirectPage = urlParams.get('redirect') || 'index.html';
+// Só aceita redirecionar para páginas do próprio sistema (evita open redirect).
+const requestedPage = new URLSearchParams(window.location.search).get('redirect') || '';
+const redirectPage = /^[a-z]+\.html$/.test(requestedPage) && requestedPage !== 'login.html' ? requestedPage : 'index.html';
 
 const authForm = document.getElementById('authForm');
 const btnSubmit = document.getElementById('btnSubmit');
-const localSocket = typeof io !== 'undefined' ? io() : null;
 
-authForm.addEventListener('submit', (e) => {
+authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (!localSocket) {
-        toast("Erro: Sem conexão com o servidor.");
-        return;
-    }
-
     const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
+    const password = document.getElementById('password').value;
     if (!username || !password) return;
 
     const originalText = btnSubmit.innerText;
@@ -22,16 +17,23 @@ authForm.addEventListener('submit', (e) => {
     btnSubmit.innerText = 'Aguarde...';
     btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
 
-    localSocket.emit('login', { username, password }, (response) => {
-        btnSubmit.disabled = false;
-        btnSubmit.innerText = originalText;
-        btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
-
-        if (response.success) {
-            localStorage.setItem('lanchonete_session', JSON.stringify(response.user));
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (data.ok) {
             window.location.href = redirectPage;
-        } else {
-            toast(response.message);
+            return;
         }
-    });
+        toast(data.message);
+    } catch (err) {
+        toast('Erro: Sem conexão com o servidor.');
+    }
+
+    btnSubmit.disabled = false;
+    btnSubmit.innerText = originalText;
+    btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
 });

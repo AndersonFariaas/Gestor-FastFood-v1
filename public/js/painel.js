@@ -29,7 +29,7 @@ function render() {
     const historicoProntos = prontos.slice(1, 13);
     $('gridProntos').innerHTML = historicoProntos.map(o => `
         <div class="bg-green-900/20 border border-green-700/50 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg">
-            <span class="text-4xl font-black text-green-400">#${o.number}</span>
+            <span class="text-4xl font-black text-green-400">#${esc(o.number)}</span>
             <span class="text-sm text-gray-300 truncate w-full text-center mt-1">${esc(o.customer || 'Balcão')}</span>
         </div>
     `).join('');
@@ -39,7 +39,7 @@ function render() {
     const historicoPreparo = emPreparo.slice(0, 12);
     $('gridPreparo').innerHTML = historicoPreparo.map(o => `
         <div class="bg-yellow-900/10 border border-yellow-700/30 rounded-xl p-4 flex flex-col items-center justify-center">
-            <span class="text-3xl font-black text-yellow-500">#${o.number}</span>
+            <span class="text-3xl font-black text-yellow-500">#${esc(o.number)}</span>
             <span class="text-sm text-gray-400 truncate w-full text-center mt-1">${esc(o.customer || 'Balcão')}</span>
         </div>
     `).join('');

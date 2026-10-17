@@ -1,4 +1,4 @@
-let db = loadDB(), cart = [], category = '';
+let db = loadDB(), cart = [], category = '', sending = false;
 const $ = id => document.getElementById(id);
 
 function renderCats() {
@@ -20,7 +20,7 @@ function renderProducts() {
     const ps = db.products.filter(p => p.active && (!category || p.category === category) && p.name.toLowerCase().includes(q));
 
     $('produtos').innerHTML = ps.length ? ps.map(p => `
-        <button class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-orange-500 hover:shadow-md transition-all text-left flex flex-col justify-between gap-3 group" data-id="${p.id}">
+        <button class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:border-orange-500 hover:shadow-md transition-all text-left flex flex-col justify-between gap-3 group" data-id="${esc(p.id)}">
             <div>
                 <span class="inline-block bg-orange-50 text-orange-600 text-xs px-2 py-1 rounded font-semibold mb-2">${esc(p.category)}</span>
                 <strong class="block text-gray-800 text-lg leading-tight mb-1 group-hover:text-orange-600 transition-colors">${esc(p.name)}</strong>
@@ -64,11 +64,11 @@ function renderCart() {
                     <strong class="text-gray-900">${money(i.price * i.qty)}</strong>
                 </div>
                 <div class="flex items-center justify-between bg-gray-50 rounded-lg p-1 w-24">
-                    <button class="w-7 h-7 flex items-center justify-center bg-white rounded text-gray-600 shadow-sm hover:text-orange-600" data-act="dec" data-id="${i.id}">
+                    <button class="w-7 h-7 flex items-center justify-center bg-white rounded text-gray-600 shadow-sm hover:text-orange-600" data-act="dec" data-id="${esc(i.id)}">
                         <i class="ph ph-minus"></i>
                     </button>
                     <b class="text-sm font-bold w-6 text-center">${i.qty}</b>
-                    <button class="w-7 h-7 flex items-center justify-center bg-white rounded text-gray-600 shadow-sm hover:text-orange-600" data-act="inc" data-id="${i.id}">
+                    <button class="w-7 h-7 flex items-center justify-center bg-white rounded text-gray-600 shadow-sm hover:text-orange-600" data-act="inc" data-id="${esc(i.id)}">
                         <i class="ph ph-plus"></i>
                     </button>
                 </div>
@@ -79,36 +79,43 @@ function renderCart() {
     box.querySelectorAll('button[data-act]').forEach(b => b.onclick = () => change(b.dataset.id, b.dataset.act === 'inc' ? 1 : -1));
 
     const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    $('total').textContent = money(total); $('enviarPedido').disabled = !cart.length;
+    $('total').textContent = money(total); $('enviarPedido').disabled = !cart.length || sending;
 }
 
-function send() {
-    if (!cart.length) return;
-    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const elPagamento = $('pagamento');
-
-    const order = {
-        id: uid('ped'),
-        number: db.orders.length ? Math.max(...db.orders.map(o => o.number)) + 1 : 1,
-        createdAt: new Date().toISOString(),
-        status: 'NOVO',
-        customer: $('cliente').value.trim() || 'Balcão',
-        note: $('observacao').value.trim(),
-        items: cart.map(i => ({ ...i })),
-        total,
-        paymentMethod: elPagamento ? elPagamento.value : 'Dinheiro'
-    };
-
-    sendNewOrder(order);
-
-    cart = [];
-    $('cliente').value = '';
-    $('observacao').value = '';
+async function send() {
+    if (!cart.length || sending) return;
+    sending = true;
     renderCart();
-    toast(`Pedido #${order.number} enviado para a cozinha!`);
+
+    try {
+        const order = await sendNewOrder({
+            items: cart.map(i => ({ productId: i.id, qty: i.qty })),
+            customer: $('cliente').value.trim(),
+            note: $('observacao').value.trim(),
+            paymentMethod: $('pagamento').value,
+        });
+
+        cart = [];
+        $('cliente').value = '';
+        $('observacao').value = '';
+        toast(`Pedido #${order.number} enviado para a cozinha!`);
+    } catch (err) {
+        toast(err.message);
+    } finally {
+        sending = false;
+        renderCart();
+    }
 }
 
-function render() { db = loadDB(); renderCats(); renderProducts(); renderCart(); }
+// Mantém o carrinho coerente com o cardápio: atualiza preços e remove itens que ficaram indisponíveis.
+function syncCart() {
+    cart = cart.flatMap(i => {
+        const p = db.products.find(x => x.id === i.id && x.active);
+        return p ? [{ ...i, name: p.name, price: p.price }] : [];
+    });
+}
+
+function render() { db = loadDB(); syncCart(); renderCats(); renderProducts(); renderCart(); }
 
 let timerBusca;
 $('buscaProduto').addEventListener('input', () => {

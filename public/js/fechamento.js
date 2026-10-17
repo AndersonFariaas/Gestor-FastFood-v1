@@ -36,8 +36,9 @@ function renderFechamento() {
 
 $('btnEncerrarCaixa').onclick = () => {
     if (confirm('ATENÇÃO: Encerrar o caixa vai ocultar todos os pedidos de hoje das telas de preparo e zerar os contadores. Deseja confirmar?')) {
-        if (socket) socket.emit('closeRegister');
-        toast('Turno encerrado. Caixa zerado com sucesso.');
+        request('closeRegister')
+            .then(() => toast('Turno encerrado. Caixa zerado com sucesso.'))
+            .catch(err => toast(err.message));
     }
 };
 

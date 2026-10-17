@@ -36,18 +36,18 @@ function criarCardPedido(order) {
 
     let botoes = '';
     if (order.status === 'NOVO') {
-        botoes = `<button onclick="changeOrderStatus('${order.id}', 'EM_PREPARO')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-bold transition-colors">Preparar</button>`;
+        botoes = `<button data-order-id="${esc(order.id)}" data-next-status="EM_PREPARO" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-bold transition-colors">Preparar</button>`;
     } else if (order.status === 'EM_PREPARO') {
         // Quando clicar aqui, vai para PRONTO, some da cozinha e toca a TV!
-        botoes = `<button onclick="changeOrderStatus('${order.id}', 'PRONTO')" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition-colors"><i class="ph-bold ph-check"></i> Finalizar (Pronto)</button>`;
+        botoes = `<button data-order-id="${esc(order.id)}" data-next-status="PRONTO" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition-colors"><i class="ph-bold ph-check"></i> Finalizar (Pronto)</button>`;
     }
 
     return `
         <div class="bg-gray-700 p-4 rounded-xl border-l-4 ${atrasado ? 'border-red-500' : 'border-gray-500'} shadow-md">
             <div class="flex justify-between items-start mb-3 border-b border-gray-600 pb-2">
                 <div>
-                    <strong class="text-2xl text-white block">#${order.number}</strong>
-                    <span class="text-gray-400 text-sm">${order.customer || 'Balcão'}</span>
+                    <strong class="text-2xl text-white block">#${esc(order.number)}</strong>
+                    <span class="text-gray-400 text-sm">${esc(order.customer || 'Balcão')}</span>
                 </div>
                 <span class="text-sm font-medium px-2 py-1 rounded-md ${atrasado ? 'bg-red-500/20 text-red-400' : 'bg-gray-600 text-gray-300'}">
                     <i class="ph-bold ph-clock"></i> ${tempo} min
@@ -57,7 +57,7 @@ function criarCardPedido(order) {
             <ul class="space-y-2 mb-4 text-gray-200">
                 ${order.items.map(i => `
                     <li class="flex gap-2 text-lg">
-                        <strong class="text-white">${i.qty}x</strong> 
+                        <strong class="text-white">${esc(i.qty)}x</strong> 
                         <span>${esc(i.name)}</span>
                     </li>
                 `).join('')}
@@ -71,6 +71,14 @@ function criarCardPedido(order) {
         </div>
     `;
 }
+
+// Um único listener para todos os botões (os cards são recriados a cada render).
+kds.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-next-status]');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true; // evita duplo toque enquanto o servidor confirma
+    changeOrderStatus(btn.dataset.orderId, btn.dataset.nextStatus).finally(() => { btn.disabled = false; });
+});
 
 // Atualiza a cada minuto para o contador de tempo não parar
 setInterval(renderCozinha, 60000);

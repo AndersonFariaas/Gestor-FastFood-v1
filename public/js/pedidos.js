@@ -39,7 +39,7 @@ function render() {
             <tbody>
                 ${[...all].reverse().map(o => `
                     <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td class="p-4"><strong class="text-gray-900">#${o.number}</strong></td>
+                        <td class="p-4"><strong class="text-gray-900">#${esc(o.number)}</strong></td>
                         <td class="p-4 text-gray-500 text-sm">${new Date(o.createdAt).toLocaleString('pt-BR')}</td>
                         <td class="p-4 text-gray-800 font-medium">${esc(o.customer)}</td>
                         <td class="p-4 text-gray-500 text-sm max-w-xs truncate" title="${o.items.map(i => `${i.qty}× ${esc(i.name)}`).join(', ')}">${o.items.map(i => `${i.qty}× ${esc(i.name)}`).join(', ')}</td>
@@ -54,8 +54,9 @@ function render() {
 
 $('limparHistorico').onclick = () => {
     if (confirm('Atenção: Tem certeza que deseja excluir todo o histórico de pedidos? Esta ação não pode ser desfeita.')) {
-        if (socket) socket.emit('clearOrders');
-        toast('Histórico apagado com sucesso.');
+        request('clearOrders')
+            .then(() => toast('Histórico apagado com sucesso.'))
+            .catch(err => toast(err.message));
     }
 };
 

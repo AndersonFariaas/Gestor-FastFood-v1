@@ -25,7 +25,7 @@ function render() {
                         <td class="p-4"><strong class="block text-gray-900">${esc(p.name)}</strong><small class="text-gray-500">${esc(p.description || '')}</small></td>
                         <td class="p-4 text-gray-600">${esc(p.category)}</td><td class="p-4 font-bold text-gray-900">${money(p.price)}</td>
                         <td class="p-4"><span class="px-2 py-1 text-xs font-bold rounded ${p.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${p.active ? 'Disponível' : 'Indisponível'}</span></td>
-                        <td class="p-4 text-right space-x-2"><button class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded font-medium transition-colors" data-edit="${p.id}">Editar</button><button class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded font-medium transition-colors" data-del="${p.id}">Excluir</button></td>
+                        <td class="p-4 text-right space-x-2"><button class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded font-medium transition-colors" data-edit="${esc(p.id)}">Editar</button><button class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded font-medium transition-colors" data-del="${esc(p.id)}">Excluir</button></td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -47,42 +47,46 @@ function openEdit(id) {
     modal.classList.remove('hidden'); $('produtoNome').focus();
 }
 
-function close() { modal.classList.add('hidden') }
+function closeModal() { modal.classList.add('hidden') }
 
-$('novoProduto').onclick = () => openEdit(); $('fecharModal').onclick = close; $('cancelar').onclick = close;
-modal.onclick = e => { if (e.target === modal) close() };
+$('novoProduto').onclick = () => openEdit(); $('fecharModal').onclick = closeModal; $('cancelar').onclick = closeModal;
+modal.onclick = e => { if (e.target === modal) closeModal() };
 
 let timerBuscaProd;
 $('filtroCardapio').oninput = () => { clearTimeout(timerBuscaProd); timerBuscaProd = setTimeout(render, 300); };
 $('filtroCategoria').onchange = render;
 
-$('produtoForm').onsubmit = e => {
+$('produtoForm').onsubmit = async e => {
     e.preventDefault();
     const id = $('produtoId').value;
     const data = { name: $('produtoNome').value.trim(), price: Number($('produtoPreco').value), category: $('produtoCategoria').value.trim(), description: $('produtoDescricao').value.trim(), active: $('produtoAtivo').checked };
     if (!data.name || !data.category || data.price < 0) return;
 
-    if (id) {
-        const productData = { id, ...data };
-        Object.assign(db.products.find(p => p.id === id), productData);
-        if (socket) socket.emit('updateProduct', productData);
-        toast('Item atualizado com sucesso!');
-    } else {
-        const newProduct = { id: uid('prod'), ...data };
-        db.products.push(newProduct);
-        if (socket) socket.emit('addProduct', newProduct);
-        toast('Novo item criado com sucesso!');
+    // O servidor responde com o cardápio atualizado (evento 'sync'), que re-renderiza a tabela.
+    try {
+        if (id) {
+            await request('updateProduct', { id, ...data });
+            toast('Item atualizado com sucesso!');
+        } else {
+            await request('addProduct', data);
+            toast('Novo item criado com sucesso!');
+        }
+        closeModal();
+    } catch (err) {
+        toast(err.message);
     }
-    close(); render();
 };
 
-function del(id) {
+async function del(id) {
     const p = db.products.find(x => x.id === id);
     if (!p) return;
     if (confirm(`Tem certeza que deseja excluir "${p.name}"?`)) {
-        db.products = db.products.filter(x => x.id !== id);
-        if (socket) socket.emit('deleteProduct', id);
-        render(); toast('Item excluído com sucesso.');
+        try {
+            await request('deleteProduct', id);
+            toast('Item excluído com sucesso.');
+        } catch (err) {
+            toast(err.message);
+        }
     }
 }
 window.addEventListener('dbchange', render);
