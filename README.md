@@ -1,56 +1,116 @@
-# 🍔 Sistema de Lanchonete (PDV + KDS)
+# 🍔 Gestor FastFood
 
-Um sistema completo para gerenciamento de lanchonetes e pizzarias, construído com arquitetura Client-Server. Possui Frente de Caixa (PDV), Painel de Cozinha (KDS), Histórico Financeiro e Autenticação.
+Sistema de gestão para lanchonetes: **frente de caixa (PDV)**, **tela da cozinha (KDS)**, **painel de senhas para TV**, **fechamento de caixa por turno** e **gestão de cardápio e usuários** — tudo sincronizado em tempo real na rede local.
 
-## 🚀 Tecnologias Utilizadas
-* **Frontend:** HTML5, Tailwind CSS, Phosphor Icons, JavaScript (Vanilla)
-* **Backend:** Node.js, Express
-* **Tempo Real:** Socket.io (WebSockets)
-* **Banco de Dados:** SQLite
+## ✨ Funcionalidades
 
-## ⚙️ Como executar o projeto localmente
+- **Caixa:** busca e categorias, carrinho, forma de pagamento obrigatória, impressão automática de cupom.
+- **Cozinha:** pedidos novos e em preparo, cronômetro com alerta de atraso, aviso sonoro.
+- **Painel da TV:** senha chamada em destaque com som, lista de prontos e em preparo.
+- **Pedidos:** fluxo `Novo → Em preparo → Pronto → Entregue`, cancelamento com motivo (gerência).
+- **Fechamento:** faturamento (pedidos entregues) por forma de pagamento, turnos com histórico consultável. Só fecha quando não há pedidos em andamento.
+- **Cardápio e usuários:** CRUD completo, senha provisória no primeiro acesso, perfis Gerente/Operador.
+- **Funciona offline:** nenhuma dependência de CDN — ideal para a rede da loja.
 
-1. Clone o repositório:
-```bash
-git clone https://github.com/AndersonFariaas/Gestor-FastFood-v1.git
+## 🧱 Arquitetura
+
+Monorepo com [npm workspaces](https://docs.npmjs.com/cli/using-npm/workspaces):
+
+```
+apps/
+  api/        Node.js + Express + Socket.IO (TypeScript executado nativamente pelo Node 24)
+  web/        Vue 3 + Vite + Tailwind CSS + Pinia + Vue Router
+packages/
+  shared/     Tipos, constantes e validações (zod) usados pela API e pelo front
 ```
 
-2. Instale as dependências:
+```
+Navegador ──HTTP (REST)──▶ API ──▶ Serviços ──▶ Repositórios ──▶ SQLite
+    ▲                                  │
+    └───── Socket.IO (só leitura) ◀── Eventos de domínio
+```
+
+- **REST para ações, Socket.IO só para notificar** as telas (servidor → cliente).
+- **Servidor é a fonte da verdade:** o navegador envia apenas itens e quantidades; preço, total, número da senha e horário são calculados na API, dentro de transações.
+- **Camadas na API:** rotas (HTTP + validação) → serviços (regras de negócio) → repositórios (SQL). Dependências injetadas em `container.ts`.
+- **Banco:** SQLite nativo do Node (`node:sqlite`), migrações versionadas em `apps/api/src/db/migrations`, valores em centavos.
+
+### Segurança
+
+- Sessão em cookie `httpOnly` + `SameSite=Strict`; token guardado só como hash no banco.
+- Senhas com bcrypt, limite de tentativas de login e mensagens que não revelam usuários válidos.
+- Permissões verificadas no servidor (gerência × operador) em toda rota.
+- Validação de todas as entradas com zod; erros nunca derrubam o processo.
+- Cabeçalhos de segurança com Helmet (CSP); nenhum HTML montado com dados do usuário.
+
+## 🚀 Como rodar
+
+Requisitos: **Node.js 24+**.
+
 ```bash
 npm install
 ```
 
-3. Inicie o servidor:
+### Desenvolvimento
+
+```bash
+npm run dev
+```
+
+Sobe a API em `http://localhost:3000` e o front com hot reload em **`http://localhost:5173`** (o Vite repassa `/api` e o WebSocket para a API).
+
+### Produção (rede da loja)
+
+```bash
+npm run build
+```
+
 ```bash
 npm start
 ```
 
-4. Acesse no navegador: `http://localhost:3000`
+A API passa a servir também o front compilado em `http://<ip-do-computador>:3000`. Abra o caixa, a cozinha (`/cozinha`) e o painel (`/painel`) em qualquer dispositivo da rede.
 
-### 🔑 Primeiro acesso
-Na primeira execução (banco vazio) o sistema cria o usuário `admin`:
-* Se a variável `ADMIN_PASSWORD` estiver definida, ela será a senha.
-* Caso contrário, uma senha aleatória é gerada e exibida **uma única vez** no terminal.
+### Primeiro acesso
 
-### ⚙️ Variáveis de ambiente (opcionais)
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `PORT` | `3000` | Porta do servidor |
-| `HOST` | `0.0.0.0` | Interface de rede (use `127.0.0.1` para acesso só local) |
-| `DB_PATH` | `./lanchonete.sqlite` | Caminho do banco SQLite |
-| `SESSION_TTL_HOURS` | `168` (7 dias) | Duração da sessão de login |
-| `ADMIN_PASSWORD` | aleatória | Senha do admin criado no primeiro uso |
+Na primeira execução é criado o usuário **`admin`**. A senha é a de `ADMIN_PASSWORD` (se definida) ou uma senha aleatória exibida **uma única vez** no log. No primeiro login o sistema pede para trocá-la.
 
-## 🛡️ Segurança
-- Login validado no servidor, com sessão em cookie `httpOnly` e limite de tentativas.
-- Todas as ações em tempo real exigem sessão válida; ações de gerência (cardápio, fechamento, cancelamento) são bloqueadas no servidor para operadores.
-- Preço, total, número da senha e horário do pedido são calculados pelo servidor — o navegador envia apenas itens e quantidades.
-- Todos os dados recebidos são validados (`zod`) e erros nunca derrubam o servidor.
+### Migrar dados da versão 1
 
-## 🔒 Funcionalidades
-- Sincronização em tempo real entre Caixa e Cozinha.
-- Controle de acessos (Administrador vs Usuário Comum).
-- Fechamento de caixa com relatório de pagamentos.
-- Gestão de Cardápio e Histórico de Vendas.
+O banco antigo (`lanchonete.sqlite`) pode ser importado para um banco novo — usuários (com as mesmas senhas), cardápio e pedidos:
 
-- Feito por Anderson Farias
+```bash
+npm run db:import-legacy -- ../../lanchonete.sqlite
+```
+
+Rode **antes** de cadastrar dados no sistema novo. Quem ainda usa a senha padrão `admin123` precisará trocá-la no próximo login.
+
+## ⚙️ Configuração
+
+Copie `apps/api/.env.example` para `apps/api/.env`. Todas as variáveis são opcionais:
+
+| Variável            | Padrão             | Descrição                                             |
+| ------------------- | ------------------ | ----------------------------------------------------- |
+| `PORT`              | `3000`             | Porta da API                                          |
+| `HOST`              | `0.0.0.0`          | Use `127.0.0.1` para permitir acesso só nesta máquina |
+| `DB_PATH`           | `data/fastfood.db` | Caminho do banco (relativo a `apps/api`)              |
+| `SESSION_TTL_HOURS` | `168` (7 dias)     | Duração da sessão                                     |
+| `COOKIE_SECURE`     | `false`            | `true` somente se o sistema for servido via HTTPS     |
+| `ADMIN_PASSWORD`    | aleatória          | Senha do `admin` criado no primeiro uso               |
+| `LOG_LEVEL`         | `info`             | Nível de log (pino)                                   |
+
+## 🧪 Qualidade
+
+| Comando             | O que faz                                     |
+| ------------------- | --------------------------------------------- |
+| `npm test`          | Testes (Vitest): integração da API e unidades |
+| `npm run typecheck` | Checagem de tipos de todos os pacotes         |
+| `npm run lint`      | ESLint (TypeScript + Vue)                     |
+| `npm run format`    | Prettier                                      |
+| `npm run check`     | Tudo acima, como no CI                        |
+
+O GitHub Actions executa `npm run check` e o build a cada push e pull request.
+
+---
+
+Feito por **Anderson Farias** · Licença [GPL-3.0](LICENSE)

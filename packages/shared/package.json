@@ -1,0 +1,21 @@
+{
+  "name": "@fastfood/shared",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Tipos, constantes e validações compartilhados entre a API e o front-end.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

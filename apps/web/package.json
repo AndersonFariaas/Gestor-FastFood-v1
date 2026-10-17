@@ -1,0 +1,34 @@
+{
+  "name": "@fastfood/web",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Front-end (Vue 3) do Gestor FastFood: caixa, cozinha, painel de senhas e gerência.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fastfood/shared": "*",
+    "@phosphor-icons/vue": "^2.2.1",
+    "pinia": "^4.1.0",
+    "socket.io-client": "^4.8.4",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^30.1.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5",
+    "vue-tsc": "^3.3.13"
+  }
+}
