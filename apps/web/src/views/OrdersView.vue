@@ -141,6 +141,8 @@ async function cancel(order: Order) {
   }
 }
 
+// Só a gerência cancela; para operadores a coluna de ações nem aparece.
+const showActions = computed(() => auth.isAdmin && !viewingPast.value);
 const canCancel = (o: Order) =>
   auth.isAdmin && !viewingPast.value && !['ENTREGUE', 'CANCELADO'].includes(o.status);
 </script>
@@ -281,7 +283,7 @@ const canCancel = (o: Order) =>
             <th scope="col">Pagamento</th>
             <th scope="col">Status</th>
             <th scope="col" class="text-right">Total</th>
-            <th v-if="!viewingPast" scope="col"><span class="sr-only">Ações</span></th>
+            <th v-if="showActions" scope="col"><span class="sr-only">Ações</span></th>
           </tr>
         </thead>
         <tbody>
@@ -312,29 +314,16 @@ const canCancel = (o: Order) =>
             <td class="text-right font-display font-semibold text-stone-900 tabular-nums">
               {{ formatCents(o.totalCents) }}
             </td>
-            <td v-if="!viewingPast">
-              <div class="flex justify-end gap-1">
-                <BaseButton
-                  v-if="o.status === 'PRONTO'"
-                  size="sm"
-                  variant="success"
-                  :loading="busyId === o.id"
-                  @click="deliver(o)"
-                >
-                  <PhCheck class="size-4" weight="bold" aria-hidden="true" /> Entregar
-                </BaseButton>
-                <BaseButton
-                  v-if="canCancel(o)"
-                  size="sm"
-                  variant="ghost"
-                  :disabled="busyId === o.id"
-                  :aria-label="`Cancelar pedido ${o.number}`"
-                  title="Cancelar pedido"
-                  @click="cancel(o)"
-                >
-                  <PhProhibit class="size-5 text-brand-600" aria-hidden="true" />
-                </BaseButton>
-              </div>
+            <td v-if="showActions" class="text-right">
+              <BaseButton
+                v-if="canCancel(o)"
+                size="sm"
+                :disabled="busyId === o.id"
+                :aria-label="`Cancelar pedido ${o.number}`"
+                @click="cancel(o)"
+              >
+                <PhProhibit class="size-4" weight="bold" aria-hidden="true" /> Cancelar pedido
+              </BaseButton>
             </td>
           </tr>
         </tbody>

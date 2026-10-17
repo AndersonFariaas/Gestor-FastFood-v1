@@ -3,13 +3,12 @@ import { DEFAULT_CUSTOMER } from '@fastfood/shared';
 import { PhBellRinging } from '@phosphor-icons/vue';
 import { computed, ref } from 'vue';
 import BrandMark from '@/components/layout/BrandMark.vue';
+import PanelGrid from '@/components/panel/PanelGrid.vue';
 import { useChime } from '@/composables/useChime';
 import { useNewArrivals } from '@/composables/useNewArrivals';
 import { useNow } from '@/composables/useNow';
 import { useOrdersStore } from '@/stores/orders';
 import { formatTime } from '@/utils/format';
-
-const GRID_SIZE = 12;
 
 const orders = useOrdersStore();
 const chime = useChime();
@@ -20,7 +19,7 @@ const highlight = ref(false);
 const ready = computed(() =>
   orders.withStatus('PRONTO').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
 );
-const preparing = computed(() => orders.withStatus('EM_PREPARO').slice(0, GRID_SIZE));
+const preparing = computed(() => orders.withStatus('EM_PREPARO'));
 const current = computed(() => ready.value[0] ?? null);
 
 useNewArrivals(
@@ -50,7 +49,9 @@ useNewArrivals(
       <span class="font-display text-4xl font-bold tabular-nums">{{ formatTime(now) }}</span>
     </header>
 
-    <main class="grid min-h-0 flex-1 grid-cols-1 gap-6 p-6 lg:grid-cols-[5fr_7fr]">
+    <main
+      class="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,2fr)_minmax(0,3fr)] gap-6 p-6 lg:grid-cols-[5fr_7fr] lg:grid-rows-[minmax(0,1fr)]"
+    >
       <!-- Senha chamada -->
       <section
         class="relative flex flex-col items-center justify-center overflow-hidden rounded-[2.5rem] bg-brand-600 p-8 text-center transition-transform duration-500"
@@ -81,29 +82,15 @@ useNewArrivals(
       </section>
 
       <div class="grid min-h-0 grid-rows-2 gap-6">
-        <section class="flex min-h-0 flex-col rounded-[2rem] bg-stone-900 p-6">
+        <section class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] bg-stone-900 p-6">
           <h2 class="mb-4 flex items-center gap-3 font-display text-2xl font-bold text-emerald-400">
             <span class="size-3 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" /> Pode retirar
           </h2>
-          <div class="grid flex-1 grid-cols-3 content-start gap-4 xl:grid-cols-4">
-            <div
-              v-for="o in ready.slice(1, GRID_SIZE + 1)"
-              :key="o.id"
-              class="rounded-2xl bg-emerald-500/10 p-4 text-center ring-1 ring-emerald-500/30"
-            >
-              <p class="font-display text-5xl font-bold text-emerald-400 tabular-nums">{{ o.number }}</p>
-              <p class="mt-1 truncate text-sm text-stone-300">{{ o.customer }}</p>
-            </div>
-          </div>
+          <PanelGrid :orders="ready.slice(1)" tone="ready" />
         </section>
-        <section class="flex min-h-0 flex-col rounded-[2rem] bg-stone-900 p-6">
+        <section class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] bg-stone-900 p-6">
           <h2 class="mb-4 font-display text-2xl font-bold text-accent-400">Preparando</h2>
-          <div class="grid flex-1 grid-cols-3 content-start gap-4 xl:grid-cols-4">
-            <div v-for="o in preparing" :key="o.id" class="rounded-2xl bg-white/5 p-4 text-center">
-              <p class="font-display text-4xl font-bold text-stone-200 tabular-nums">{{ o.number }}</p>
-              <p class="mt-1 truncate text-sm text-stone-500">{{ o.customer }}</p>
-            </div>
-          </div>
+          <PanelGrid :orders="preparing" tone="preparing" />
         </section>
       </div>
     </main>

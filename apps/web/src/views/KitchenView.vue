@@ -2,7 +2,7 @@
 import type { Order } from '@fastfood/shared';
 import { PhSpeakerHigh, PhSpeakerSlash } from '@phosphor-icons/vue';
 import { computed } from 'vue';
-import KitchenTicket from '@/components/kitchen/KitchenTicket.vue';
+import KitchenColumn from '@/components/kitchen/KitchenColumn.vue';
 import BrandMark from '@/components/layout/BrandMark.vue';
 import ConnectionIndicator from '@/components/layout/ConnectionIndicator.vue';
 import { useChime } from '@/composables/useChime';
@@ -64,28 +64,19 @@ async function advance(order: Order) {
       </div>
     </header>
 
-    <main class="grid min-h-0 flex-1 gap-5 p-5 md:grid-cols-2">
-      <section
+    <!-- Telas médias/grandes: cada coluna rola sozinha. Celular: a página inteira rola. -->
+    <main
+      class="grid min-h-0 flex-1 auto-rows-max gap-5 overflow-y-auto p-5 md:grid-cols-2 md:grid-rows-[minmax(0,1fr)] md:overflow-hidden"
+    >
+      <KitchenColumn
         v-for="col in columns"
         :key="col.title"
-        class="flex min-h-0 flex-col overflow-hidden rounded-3xl bg-stone-900 ring-1 ring-white/5"
-      >
-        <h2
-          class="flex items-center justify-between px-5 py-3.5 font-display text-lg font-bold uppercase"
-          :class="col.header"
-        >
-          {{ col.title }}
-          <span class="rounded-full bg-black/20 px-3 py-0.5 text-base tabular-nums">{{
-            col.orders.length
-          }}</span>
-        </h2>
-        <div class="grid flex-1 content-start gap-4 overflow-y-auto p-4 xl:grid-cols-2">
-          <KitchenTicket v-for="o in col.orders" :key="o.id" :order="o" :now="now" @advance="advance" />
-          <p v-if="!col.orders.length" class="col-span-full py-16 text-center text-stone-500">
-            Nenhum pedido aqui.
-          </p>
-        </div>
-      </section>
+        :title="col.title"
+        :header-class="col.header"
+        :orders="col.orders"
+        :now="now"
+        @advance="advance"
+      />
     </main>
   </div>
 </template>

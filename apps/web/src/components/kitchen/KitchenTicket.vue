@@ -22,7 +22,7 @@ function advance() {
 
 <template>
   <article
-    class="overflow-hidden rounded-2xl bg-stone-800 shadow-lg ring-2 transition-shadow"
+    class="flex min-w-0 flex-col overflow-hidden rounded-2xl bg-stone-800 shadow-lg ring-2 transition-shadow"
     :class="late ? 'ring-brand-500 shadow-brand-950/50' : 'ring-white/5'"
     :aria-label="`Pedido ${order.number}`"
   >
@@ -48,16 +48,16 @@ function advance() {
         >
           {{ item.quantity }}
         </span>
-        <span class="pt-0.5">{{ item.name }}</span>
+        <span class="min-w-0 pt-0.5 break-words">{{ item.name }}</span>
       </li>
     </ul>
 
     <p v-if="order.note" class="mx-4 mb-3 flex gap-2 rounded-xl bg-accent-400/15 p-3 text-sm text-accent-200">
       <PhWarningCircle class="mt-0.5 size-4 shrink-0" weight="fill" aria-hidden="true" />
-      <span><strong>Obs:</strong> {{ order.note }}</span>
+      <span class="min-w-0 break-words"><strong>Obs:</strong> {{ order.note }}</span>
     </p>
 
-    <div class="p-3 pt-1">
+    <div class="mt-auto p-3 pt-1">
       <button
         type="button"
         class="flex h-14 w-full items-center justify-center gap-2 rounded-xl font-display text-lg font-bold transition-all active:scale-[0.98] disabled:opacity-60"
