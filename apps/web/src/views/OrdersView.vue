@@ -15,6 +15,7 @@ import {
   PhMagnifyingGlass,
   PhProhibit,
   PhReceipt,
+  PhBellRinging,
 } from '@phosphor-icons/vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -24,12 +25,13 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import StatCard from '@/components/ui/StatCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { useDialog } from '@/composables/useDialog';
+import { useNow } from '@/composables/useNow';
 import { useToast } from '@/composables/useToast';
 import { api } from '@/services/api';
 import { errorMessage } from '@/services/http';
 import { useAuthStore } from '@/stores/auth';
 import { useOrdersStore } from '@/stores/orders';
-import { formatDateTime, formatTime, normalize } from '@/utils/format';
+import { formatDateTime, formatTime, minutesSince, normalize } from '@/utils/format';
 import { PAYMENT_ICONS } from '@/utils/visuals';
 
 const auth = useAuthStore();
@@ -59,6 +61,12 @@ const counts = computed(() => {
   for (const o of source.value) c[o.status]++;
   return c;
 });
+const now = useNow(30_000);
+// Prontos para retirada, do que espera há mais tempo para o mais recente.
+const readyOrders = computed(() =>
+  viewingPast.value ? [] : store.withStatus('PRONTO').sort((a, b) => a.updatedAt.localeCompare(b.updatedAt)),
+);
+
 const deliveredCents = computed(() =>
   source.value.filter((o) => o.status === 'ENTREGUE').reduce((s, o) => s + o.totalCents, 0),
 );
@@ -157,6 +165,55 @@ const canCancel = (o: Order) =>
         </select>
       </template>
     </PageHeader>
+
+    <!-- Despacho: pedidos prontos esperando o cliente -->
+    <section v-if="readyOrders.length" class="mb-8" aria-labelledby="ready-title">
+      <h2 id="ready-title" class="mb-3 flex items-center gap-2 font-display text-xl font-bold text-stone-900">
+        <PhBellRinging class="size-6 animate-pulse text-brand-600" weight="fill" aria-hidden="true" />
+        Prontos para entregar
+        <span class="rounded-full bg-brand-600 px-2.5 py-0.5 font-sans text-sm font-bold text-white">
+          {{ readyOrders.length }}
+        </span>
+      </h2>
+      <TransitionGroup
+        tag="ul"
+        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        enter-from-class="opacity-0 scale-95"
+        enter-active-class="transition duration-200"
+        leave-to-class="opacity-0 scale-95"
+        leave-active-class="transition duration-200"
+      >
+        <li v-for="o in readyOrders" :key="o.id" class="card flex flex-col overflow-hidden">
+          <div class="flex items-start justify-between gap-3 bg-brand-600 px-4 py-3 text-white">
+            <div class="min-w-0">
+              <p class="text-[11px] font-semibold tracking-[0.2em] text-brand-100 uppercase">Senha</p>
+              <p class="font-display text-4xl leading-none font-bold text-accent-400 tabular-nums">
+                {{ o.number }}
+              </p>
+            </div>
+            <span class="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold whitespace-nowrap">
+              pronto há {{ minutesSince(o.updatedAt, now) }} min
+            </span>
+          </div>
+          <div class="flex flex-1 flex-col gap-3 p-4">
+            <div>
+              <p class="truncate font-semibold text-stone-900">{{ o.customer }}</p>
+              <p class="line-clamp-2 text-sm text-stone-500">{{ itemsText(o) }}</p>
+            </div>
+            <BaseButton
+              class="mt-auto"
+              variant="success"
+              size="lg"
+              block
+              :loading="busyId === o.id"
+              @click="deliver(o)"
+            >
+              <PhCheck class="size-5" weight="bold" aria-hidden="true" /> Entregar
+            </BaseButton>
+          </div>
+        </li>
+      </TransitionGroup>
+    </section>
 
     <div class="mb-6 grid gap-4 sm:grid-cols-3">
       <StatCard label="Pedidos" :value="source.length">

@@ -4,9 +4,7 @@ import { PhCaretUp, PhMagnifyingGlass, PhMaskSad, PhX } from '@phosphor-icons/vu
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import CartPanel from '@/components/pos/CartPanel.vue';
 import CategoryTabs from '@/components/pos/CategoryTabs.vue';
-import OrderSuccessModal from '@/components/pos/OrderSuccessModal.vue';
 import ProductCard from '@/components/pos/ProductCard.vue';
-import ReadyOrdersStrip from '@/components/pos/ReadyOrdersStrip.vue';
 import type { SentOrder } from '@/components/pos/types';
 import EmptyState from '@/components/ui/EmptyState.vue';
 import { useSettings } from '@/composables/useSettings';
@@ -58,19 +56,16 @@ function addFirstResult() {
 }
 
 function print(result: SentOrder) {
-  if (!printReceipt(result.order, result)) {
-    toast.error('O navegador bloqueou a impressão. Permita pop-ups para este site.');
-  }
+  if (!printReceipt(result.order, result)) toast.error('Não foi possível imprimir o comprovante.');
 }
 
+/** Pedido aceito: imprime o comprovante e já deixa o caixa pronto para o próximo cliente. */
 function onSent(result: SentOrder) {
   cartOpen.value = false;
   lastSent.value = result;
+  const change = result.changeCents !== null ? ` · Troco ${formatCents(result.changeCents)}` : '';
+  toast.success(`Senha ${result.order.number} enviada para a cozinha${change}`);
   if (settings.value.autoPrint) print(result);
-}
-
-function closeSuccess() {
-  lastSent.value = null;
   searchInput.value?.focus();
 }
 
@@ -136,8 +131,6 @@ const greeting = computed(() => {
         </div>
       </div>
 
-      <ReadyOrdersStrip />
-
       <CategoryTabs v-model="category" :categories="categories" :counts="countByCategory" class="mb-5" />
 
       <div v-if="visible.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
@@ -182,7 +175,13 @@ const greeting = computed(() => {
       :class="cartOpen ? 'translate-y-0' : 'translate-y-full'"
       aria-label="Pedido atual"
     >
-      <CartPanel :closable="cartOpen" @sent="onSent" @close="cartOpen = false" />
+      <CartPanel
+        :closable="cartOpen"
+        :last-sent="lastSent"
+        @sent="onSent"
+        @reprint="print"
+        @close="cartOpen = false"
+      />
     </aside>
 
     <!-- Barra flutuante para abrir o pedido em telas menores -->
@@ -204,7 +203,5 @@ const greeting = computed(() => {
         {{ formatCents(cart.totalCents) }} <PhCaretUp class="size-5" weight="bold" aria-hidden="true" />
       </span>
     </button>
-
-    <OrderSuccessModal :result="lastSent" @close="closeSuccess" @print="print" />
   </div>
 </template>

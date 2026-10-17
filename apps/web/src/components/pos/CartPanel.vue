@@ -1,6 +1,16 @@
 <script setup lang="ts">
-import { formatCents } from '@fastfood/shared';
-import { PhMinus, PhNotePencil, PhPlus, PhShoppingBagOpen, PhTrash, PhUser, PhX } from '@phosphor-icons/vue';
+import { formatCents, PAYMENT_METHOD_LABELS } from '@fastfood/shared';
+import {
+  PhCheckCircle,
+  PhMinus,
+  PhNotePencil,
+  PhPlus,
+  PhPrinter,
+  PhShoppingBagOpen,
+  PhTrash,
+  PhUser,
+  PhX,
+} from '@phosphor-icons/vue';
 import { ref } from 'vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useToast } from '@/composables/useToast';
@@ -12,8 +22,8 @@ import CashChange from './CashChange.vue';
 import PaymentSelector from './PaymentSelector.vue';
 import type { SentOrder } from './types';
 
-defineProps<{ closable?: boolean }>();
-const emit = defineEmits<{ sent: [result: SentOrder]; close: [] }>();
+defineProps<{ closable?: boolean; lastSent?: SentOrder | null }>();
+const emit = defineEmits<{ sent: [result: SentOrder]; reprint: [result: SentOrder]; close: [] }>();
 
 const cart = useCartStore();
 const orders = useOrdersStore();
@@ -67,12 +77,59 @@ async function submit() {
 
     <!-- Itens -->
     <div class="min-h-32 flex-1 overflow-y-auto px-5 py-3">
-      <div v-if="cart.isEmpty" class="flex h-full flex-col items-center justify-center py-8 text-center">
-        <div class="mb-3 flex size-16 items-center justify-center rounded-full bg-accent-100 text-accent-600">
-          <PhShoppingBagOpen class="size-8" weight="duotone" aria-hidden="true" />
+      <div v-if="cart.isEmpty" class="flex h-full flex-col justify-center gap-6 py-4">
+        <!-- Último pedido enviado: confere o troco ou reimprime sem bloquear o próximo atendimento. -->
+        <section
+          v-if="lastSent"
+          class="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200"
+          aria-label="Último pedido enviado"
+          aria-live="polite"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p
+                class="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-emerald-700 uppercase"
+              >
+                <PhCheckCircle class="size-4" weight="fill" aria-hidden="true" /> Pedido enviado
+              </p>
+              <p class="mt-1 font-display text-4xl leading-none font-bold text-stone-900 tabular-nums">
+                {{ lastSent.order.number }}
+              </p>
+              <p class="mt-1 truncate text-sm font-medium text-stone-600">{{ lastSent.order.customer }}</p>
+            </div>
+            <BaseButton variant="secondary" size="sm" @click="emit('reprint', lastSent)">
+              <PhPrinter class="size-4" aria-hidden="true" /> Reimprimir
+            </BaseButton>
+          </div>
+          <dl class="mt-3 space-y-1 border-t border-emerald-200 pt-3 text-sm">
+            <div class="flex justify-between">
+              <dt class="text-stone-500">
+                Total · {{ PAYMENT_METHOD_LABELS[lastSent.order.paymentMethod] }}
+              </dt>
+              <dd class="font-display font-semibold tabular-nums">
+                {{ formatCents(lastSent.order.totalCents) }}
+              </dd>
+            </div>
+            <div v-if="lastSent.changeCents !== null" class="flex items-baseline justify-between">
+              <dt class="font-semibold text-emerald-800">Troco</dt>
+              <dd class="font-display text-2xl font-bold text-emerald-800 tabular-nums">
+                {{ formatCents(lastSent.changeCents) }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <div class="text-center">
+          <div
+            class="mx-auto mb-3 flex size-16 items-center justify-center rounded-full bg-accent-100 text-accent-600"
+          >
+            <PhShoppingBagOpen class="size-8" weight="duotone" aria-hidden="true" />
+          </div>
+          <p class="font-display font-semibold text-stone-800">
+            {{ lastSent ? 'Próximo pedido' : 'Pedido vazio' }}
+          </p>
+          <p class="mt-1 text-sm text-stone-500">Toque nos produtos para adicionar.</p>
         </div>
-        <p class="font-display font-semibold text-stone-800">Pedido vazio</p>
-        <p class="mt-1 text-sm text-stone-500">Toque nos produtos para adicionar.</p>
       </div>
 
       <TransitionGroup

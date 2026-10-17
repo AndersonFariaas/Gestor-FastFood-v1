@@ -4,10 +4,10 @@ Sistema de gestão para lanchonetes: **frente de caixa (PDV)**, **tela da cozinh
 
 ## ✨ Funcionalidades
 
-- **Caixa:** cardápio visual por categoria, busca com atalho `/`, pagamento em PIX, Dinheiro (com cálculo de troco) ou Cartão, confirmação com a senha em destaque, entrega dos pedidos prontos sem sair da tela e impressão de cupom.
+- **Caixa:** cardápio visual por categoria, busca com atalho `/`, pagamento em PIX, Dinheiro (com cálculo de troco) ou Cartão. Ao finalizar, o pedido vai para a cozinha e o comprovante (itens, senha, total e troco) é impresso automaticamente, sem cliques extras.
 - **Cozinha:** pedidos novos e em preparo, cronômetro com alerta de atraso, aviso sonoro.
 - **Painel da TV:** senha chamada em destaque com som, lista de prontos e em preparo.
-- **Pedidos:** fluxo `Novo → Em preparo → Pronto → Entregue`, cancelamento com motivo (gerência).
+- **Pedidos:** área de despacho com os pedidos prontos em destaque (botão "Entregar"), fluxo `Novo → Em preparo → Pronto → Entregue` e cancelamento com motivo (gerência).
 - **Fechamento:** faturamento (pedidos entregues) por forma de pagamento, turnos com histórico consultável. Só fecha quando não há pedidos em andamento.
 - **Cardápio e equipe:** CRUD completo, item esgotado com um toque, senha provisória no primeiro acesso, perfis Gerente/Operador.
 - **Funciona offline:** nenhuma dependência de CDN — ideal para a rede da loja.
@@ -70,6 +70,8 @@ npm start
 ```
 
 A API passa a servir também o front compilado em `http://<ip-do-computador>:3000`. Abra o caixa, a cozinha (`/cozinha`) e o painel (`/painel`) em qualquer dispositivo da rede.
+
+> **Impressão direta (sem caixa de diálogo):** abra o caixa no Chrome com a opção `--kiosk-printing` e defina a impressora térmica como padrão do Windows. Ex.: `chrome.exe --kiosk-printing http://localhost:3000`. O comprovante impresso não é documento fiscal; emitir NFC-e exige integração com a SEFAZ.
 
 ### Primeiro acesso
 

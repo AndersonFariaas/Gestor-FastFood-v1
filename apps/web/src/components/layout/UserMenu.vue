@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
           class="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50"
         >
           <span class="flex items-center gap-3">
-            <PhPrinter class="size-5 text-stone-400" aria-hidden="true" /> Imprimir cupom ao vender
+            <PhPrinter class="size-5 text-stone-400" aria-hidden="true" /> Imprimir comprovante
           </span>
           <span class="relative inline-flex">
             <input v-model="settings.autoPrint" type="checkbox" role="switch" class="peer sr-only" />
