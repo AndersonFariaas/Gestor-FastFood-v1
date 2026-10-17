@@ -13,7 +13,7 @@ const logger = createLogger(config);
 
 const db = openDatabase(config.dbPath);
 const applied = migrate(db);
-if (applied.length) logger.info({ migrations: applied }, 'Migrações aplicadas');
+if (applied.length) logger.info(`Migrações aplicadas: ${applied.join(', ')}`);
 
 const bus = createEventBus();
 const services = createServices({ db, bus, sessionTtlMs: config.sessionTtlMs });
@@ -32,7 +32,7 @@ const purgeTimer = setInterval(() => services.auth.purgeExpiredSessions(), 60 * 
 purgeTimer.unref();
 
 server.listen(config.port, config.host, () => {
-  logger.info(`🚀 API rodando em http://${config.host}:${config.port}`);
+  logger.info(`API rodando em http://${config.host}:${config.port}`);
   if (!config.webDist) logger.info('Front-end não compilado: use `npm run dev` ou `npm run build`.');
 });
 
